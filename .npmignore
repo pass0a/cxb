@@ -1,0 +1,11 @@
+.nyc_output
+coverage
+dist
+src
+test
+tsconfig.json
+tslint.json
+update.bat
+node_modules
+tmp
+package-lock.json

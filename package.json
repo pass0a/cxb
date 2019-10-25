@@ -1,0 +1,44 @@
+{
+	"name": "@passoa/pm",
+	"version": "1.0.3",
+	"description": "install native modules@passoa",
+	"main": "index.js",
+	"repository": "git+https://github.com/pass0a/pm.git",
+	"bugs": {
+		"url": "https://github.com/pass0a/pm/issues"
+	},
+	"homepage": "https://github.com/pass0a/pm#readme",
+	"scripts": {
+		"build": "rimraf dist/ && cross-env opt=build webpack",
+		"dev": "rimraf dist/ && cross-env opt=dev webpack",
+		"test": "node dist/index.js -b"
+	},
+	"author": "losper",
+	"license": "MIT",
+	"bin": {
+		"@passoa/pm": "./bin/pm.js"
+	},
+	"dependencies": {
+		"compressing": "^1.4.0",
+		"cross-env": "^6.0.3",
+		"fs-extra": "^8.1.0",
+		"get-uri": "^2.0.3",
+		"minimist": "^1.2.0"
+	},
+	"devDependencies": {
+		"@babel/core": "^7.5.5",
+		"@babel/preset-env": "^7.5.5",
+		"@types/mkdirp": "^0.5.2",
+		"@types/node": "^12.6.8",
+		"@types/tape": "^4.2.33",
+		"@types/fs-extra": "^8.0.1",
+		"@types/minimist": "^1.2.0",
+		"babel-loader": "^8.0.6",
+		"rimraf": "^2.6.3",
+		"ts-loader": "^6.0.4",
+		"typescript": "^3.5.3",
+		"webpack": "^4.36.1",
+		"webpack-bundle-analyzer": "^3.3.2",
+		"webpack-cli": "^3.3.6"
+	}
+}
