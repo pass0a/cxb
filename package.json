@@ -1,13 +1,13 @@
 {
-	"name": "@passoa/pm",
-	"version": "1.0.3",
+	"name": "@passoa/cxb",
+	"version": "1.0.2",
 	"description": "install native modules@passoa",
 	"main": "index.js",
-	"repository": "git+https://github.com/pass0a/pm.git",
+	"repository": "git+https://github.com/pass0a/cxb.git",
 	"bugs": {
-		"url": "https://github.com/pass0a/pm/issues"
+		"url": "https://github.com/pass0a/cxb/issues"
 	},
-	"homepage": "https://github.com/pass0a/pm#readme",
+	"homepage": "https://github.com/pass0a/cxb#readme",
 	"scripts": {
 		"build": "rimraf dist/ && cross-env opt=build webpack",
 		"dev": "rimraf dist/ && cross-env opt=dev webpack",
@@ -16,18 +16,19 @@
 	"author": "losper",
 	"license": "MIT",
 	"bin": {
-		"@passoa/pm": "./bin/pm.js"
+		"cxb": "./cli.js"
 	},
 	"dependencies": {
 		"compressing": "^1.4.0",
 		"cross-env": "^6.0.3",
 		"fs-extra": "^8.1.0",
-		"get-uri": "^2.0.3",
-		"minimist": "^1.2.0"
+		"minimist": "^1.2.0",
+		"request": "^2.88.0"
 	},
 	"devDependencies": {
 		"@babel/core": "^7.5.5",
 		"@babel/preset-env": "^7.5.5",
+		"@types/request": "^2.48.3",
 		"@types/mkdirp": "^0.5.2",
 		"@types/node": "^12.6.8",
 		"@types/tape": "^4.2.33",

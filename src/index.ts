@@ -1,29 +1,32 @@
-import * as path from 'path';
-import getUri from 'get-uri';
 import * as compressing from 'compressing';
 import * as fs from 'fs-extra';
 import * as minimist from 'minimist';
-import { spawn } from 'child_process';
+import * as request from 'request';
+import * as readline from 'readline';
+import * as url from 'url';
+import * as path from 'path';
+import * as cp from 'child_process';
+import { resolve } from 'dns';
+const Platform = [ 'linux', 'darwin', 'windows', 'android' ];
+const Arch = [ 'x86', 'x64', 'arm', 'arm64' ];
+function slog(msg: string) {
+	//readline.clearLine(process.stdout, 0);
+	readline.cursorTo(process.stdout, 0, undefined);
+	process.stdout.write(msg);
+}
+
 main();
-function main() {
+async function main() {
 	let argv = minimist(process.argv.slice(2));
-	let build = argv.b || argv.build;
-
 	usage(argv);
-	if (build) {
-		let cp = spawn('cmake', { stdio: 'inherit' });
+	const context = fs.readFileSync('./package.json', 'utf8');
+	let config = JSON.parse(context);
+	if (argv.b || argv.build) {
+		await build(config);
+	} else if (argv.i || argv.install) {
+		await install(config);
 	}
-	//console.log(conf, argv._.length, argv);
-	// conf_path = path.resolve(process.cwd() + '/' + (conf_path ? conf_path : 'pmconfig.js'));
-	// require(conf_path);
-	//fs.mkdirp('tmp');
-	// for (const iterator of conf) {
-	// 	let tv = iterator[target];
-
-	// 	if (tv && iterator.name) {
-	// 		install(iterator[target], iterator.name);
-	// 	}
-	// }
+	//install('https://passoa-generic.pkg.coding.net/libbt/libbt/master?version=latest', '');
 }
 function usage(argv: any) {
 	let help = argv.h || argv.help;
@@ -37,31 +40,242 @@ function usage(argv: any) {
 		log('Options:');
 		log('');
 		log('  -h, --help     Display this usage info');
-		log('  -c, --config   Path to the config file');
-		log('  -t, --target   Environment to build for');
+		log('  -b, --build   build cpp for project');
+		log('  -i, --install   install cpp module(it will build cpp module if could not download from remote)');
 		process.exit(help ? 0 : 1);
 	}
 }
-function install(remote: string, modname: string) {
-	getUri(remote, null, function(err: any, rs: any) {
-		if (err) throw err;
-		rs.pipe(fs.createWriteStream(`tmp/${modname}.tar.gz`)).on('finish', () => {
-			compressing.tgz
-				.uncompress(`tmp/${modname}.tar.gz`, 'tmp')
-				.then(() => {
-					fs
-						.copy('tmp/node_modules', 'node_modules/@passoa', { overwrite: true })
-						.then(() => {
-							console.log('move ok!!!');
-						})
-						.catch((err) => {
-							console.log('move failed', err);
-						});
-					console.log('ok');
-				})
-				.catch(() => {
-					console.log('failed');
-				});
-		});
+function eval_template(template: string, opts: any) {
+	Object.keys(opts).forEach(function(key) {
+		var pattern = '{' + key + '}';
+		while (template.indexOf(pattern) > -1) {
+			template = template.replace(pattern, opts[key]);
+		}
 	});
+	return template;
+}
+
+// url.resolve needs single trailing slash
+// to behave correctly, otherwise a double slash
+// may end up in the url which breaks requests
+// and a lacking slash may not lead to proper joining
+function fix_slashes(pathname: string) {
+	if (pathname.slice(-1) != '/') {
+		return pathname + '/';
+	}
+	return pathname;
+}
+
+// remove double slashes
+// note: path.normalize will not work because
+// it will convert forward to back slashes
+function drop_double_slashes(pathname: string) {
+	return pathname.replace(/\/\//g, '/');
+}
+function getExt(filename: string, extlist: string[]): string {
+	let found: string = '';
+	for (let ext in extlist) {
+		if (filename.endsWith('.' + ext)) {
+			if (found.length < ext.length) {
+				found = ext;
+			}
+		}
+	}
+	return found;
+}
+function plat_format(plat: string) {
+	switch (plat) {
+		case 'win32':
+		case 'windows':
+			return 'windows';
+	}
+	return plat;
+}
+function arch_format(arch: string) {
+	switch (arch) {
+		case 'ia32':
+		case 'x32':
+		case 'x86':
+			return 'x86';
+		case 'x86_64':
+		case 'x64':
+			return 'x64';
+	}
+	return arch;
+}
+async function build(config: any) {
+	let env = process.env;
+	var opts = {
+		name: config.name,
+		configuration: 'Release',
+		external: config.cxb.external,
+		version: config.version,
+		platform: plat_format(env.platform || process.platform),
+		arch: arch_format(env.arch || process.arch),
+		build_cmd: config.cxb.build_cmd,
+		toolset_path: env.toolset_path || '',
+		make_path: env.make_path || 'make'
+	};
+
+	if (opts.external) {
+		for (const key in opts.external) {
+			if (opts.external.hasOwnProperty(key)) {
+				const element = opts.external[key];
+				let src = path.join('build/stage', key);
+				let dst = path.join('3rd', key);
+				if (fs.existsSync(dst)) {
+					break;
+				}
+				if (await download(element, src)) {
+					throw new Error(`download ${element} error in build`);
+				}
+				if (await uncompress(src, dst)) {
+					throw new Error(`uncompress ${src} error in build`);
+				}
+			}
+		}
+	}
+	if (opts.build_cmd) {
+		let build_str = `${opts.platform}_${opts.arch}`;
+		let bc = opts.build_cmd[build_str];
+		for (const key in bc) {
+			if (bc.hasOwnProperty(key)) {
+				const element = bc[key];
+				bc[key] = eval_template(element, opts);
+			}
+		}
+		fs.emptyDirSync(`build/${build_str}`);
+		process.chdir(`build/${build_str}`);
+		bc = [ '../../' ].concat(bc);
+		console.log(build_str, bc);
+		let r = cp.spawnSync('cmake', bc, { stdio: 'inherit' });
+		if (r.status) {
+			throw new Error('cmake generator fails');
+		}
+		r = cp.spawnSync('cmake', [ '--build', './', '--config', 'Release' ], { stdio: 'inherit' });
+		if (r.status) {
+			throw new Error('cmake build fails');
+		}
+	}
+}
+async function install(config: any) {
+	let env = process.env;
+	let cxb = config.cxb;
+	var opts = {
+		name: config.name,
+		configuration: 'Release',
+		module_name: '',
+		module_path: '',
+		remote_path: '',
+		package_name: cxb.binary.package_name,
+		host: '',
+		version: config.version,
+		platform: plat_format(env.platform || process.platform),
+		arch: arch_format(env.arch || process.arch),
+		hosted_path: '',
+		hosted_tarball: '',
+		staged_tarball: ''
+	};
+	opts.host = fix_slashes(eval_template(cxb.binary.host, opts));
+	opts.module_name = eval_template(cxb.binary.module_name, opts);
+	opts.module_path = eval_template(cxb.binary.module_path, opts);
+	opts.package_name = eval_template(cxb.binary.package_name, opts);
+	opts.remote_path = eval_template(cxb.binary.remote_path, opts);
+	opts.hosted_path = url.resolve(opts.host, opts.remote_path);
+	opts.hosted_tarball = url.resolve(opts.hosted_path, opts.package_name);
+	let tarball = `${opts.module_name}-v${opts.version}-${opts.platform}-${opts.arch}.tar.gz`;
+	opts.staged_tarball = path.join('build/stage', tarball);
+	if (await download(opts.hosted_tarball, opts.staged_tarball)) {
+		throw new Error(`download ${opts.hosted_tarball} error in install`);
+	}
+	if (await uncompress(opts.staged_tarball, opts.module_path)) {
+		throw new Error(`uncompress ${opts.staged_tarball} error in install`);
+	}
+}
+async function uncompress(src: string, dst: string) {
+	return new Promise((resolve) => {
+		let ext = getExt(src, [ 'tar.gz', 'zip' ]);
+		fs.mkdirpSync(dst);
+		switch (ext) {
+			case 'tar.gz':
+				compressing.tgz.uncompress(src, dst);
+				break;
+			case 'zip':
+				compressing.zip.uncompress(src, dst);
+				break;
+			default:
+				resolve(-1);
+		}
+		resolve(0);
+	});
+}
+function downloadByRequest(remote: string, staged: string, cb: (err: number) => void) {
+	let total = 0,
+		cur = 0,
+		len = 0,
+		err = 0;
+	request
+		.get(remote)
+		.on('response', function(response) {
+			err = response.statusCode == 200 ? 0 : -2; // 200
+			let tmp = response.headers['content-length'];
+			if (tmp) {
+				len = parseInt(tmp, 10);
+				total = len / (1024 * 1024);
+			}
+		})
+		.on('data', (chunk) => {
+			cur += chunk.length;
+			if (len > 0) {
+				slog(
+					'Downloading ' +
+						(100.0 * cur / len).toFixed(2) +
+						'% ' +
+						(cur / 1048576).toFixed(2) +
+						' ' +
+						'. Total size: ' +
+						total.toFixed(2) +
+						' mb'
+				);
+			} else {
+				slog('Downloading ' + (cur / 1024).toFixed(2) + 'kb ' + '. Total size: unknow mb');
+			}
+		})
+		.on('error', (code) => {
+			console.log(code);
+			err = -1;
+			cb(-1);
+		})
+		.on('end', () => {
+			console.log('\r\n');
+			cb(err);
+		})
+		.pipe(fs.createWriteStream(staged));
+}
+//async function downloadByCurl(remote: string, staged: string) {}
+async function download(remote: string, staged: string) {
+	return new Promise((resolve) => {
+		fs.mkdirpSync(path.dirname(staged));
+		if (fs.existsSync(staged)) {
+			console.log('exist staged:' + staged);
+			resolve(0);
+		} else {
+			let r = cp.spawn('curl33', [ '-L', remote, '-o', staged ], { stdio: 'inherit' });
+			r.on('error', (err) => {
+				console.log(err);
+			});
+			r.on('close', (code) => {
+				if (code) {
+					console.log('downloadByCurl:' + code);
+					downloadByRequest(remote, staged, (err) => {
+						console.log('downloadByRequest:' + err);
+						resolve(err);
+					});
+				} else {
+					resolve(0);
+				}
+			});
+		}
+	});
+	//return await downloadByCurl(remote, staged);
 }

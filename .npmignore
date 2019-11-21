@@ -1,6 +1,5 @@
 .nyc_output
 coverage
-dist
 src
 test
 tsconfig.json
@@ -9,3 +8,5 @@ update.bat
 node_modules
 tmp
 package-lock.json
+webpack.config.js
+*.map

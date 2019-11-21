@@ -13,7 +13,8 @@ module.exports = () => {
 		// Change to your "entry-point".
 		watch: opt_watch,
 		entry: {
-			index: './src/index.ts'
+			index: './src/index.ts',
+			test: './test/index.ts'
 		},
 		output: {
 			path: path.resolve(__dirname, opt_dist),
