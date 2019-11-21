@@ -74,12 +74,13 @@ function drop_double_slashes(pathname: string) {
 }
 function getExt(filename: string, extlist: string[]): string {
 	let found: string = '';
-	for (let ext in extlist) {
+	for (let ext of extlist) {
 		if (filename.endsWith('.' + ext)) {
 			if (found.length < ext.length) {
 				found = ext;
 			}
 		}
+		console.log(filename, found, ext);
 	}
 	return found;
 }
@@ -126,10 +127,14 @@ async function build(config: any) {
 				if (fs.existsSync(dst)) {
 					break;
 				}
+				let ext = getExt(element, [ 'tar.gz', 'zip' ]);
+				src = `${src}.${ext}`;
 				if (await download(element, src)) {
+					fs.removeSync(src);
 					throw new Error(`download ${element} error in build`);
 				}
 				if (await uncompress(src, dst)) {
+					fs.removeSync(src);
 					throw new Error(`uncompress ${src} error in build`);
 				}
 			}
@@ -147,7 +152,7 @@ async function build(config: any) {
 		fs.emptyDirSync(`build/${build_str}`);
 		process.chdir(`build/${build_str}`);
 		bc = [ '../../' ].concat(bc);
-		console.log(build_str, bc);
+
 		let r = cp.spawnSync('cmake', bc, { stdio: 'inherit' });
 		if (r.status) {
 			throw new Error('cmake generator fails');
@@ -186,27 +191,48 @@ async function install(config: any) {
 	let tarball = `${opts.module_name}-v${opts.version}-${opts.platform}-${opts.arch}.tar.gz`;
 	opts.staged_tarball = path.join('build/stage', tarball);
 	if (await download(opts.hosted_tarball, opts.staged_tarball)) {
+		fs.removeSync(opts.staged_tarball);
 		throw new Error(`download ${opts.hosted_tarball} error in install`);
 	}
 	if (await uncompress(opts.staged_tarball, opts.module_path)) {
+		fs.removeSync(opts.staged_tarball);
 		throw new Error(`uncompress ${opts.staged_tarball} error in install`);
 	}
 }
 async function uncompress(src: string, dst: string) {
 	return new Promise((resolve) => {
 		let ext = getExt(src, [ 'tar.gz', 'zip' ]);
-		fs.mkdirpSync(dst);
+
 		switch (ext) {
 			case 'tar.gz':
-				compressing.tgz.uncompress(src, dst);
+				fs.mkdirpSync(dst);
+				compressing.tgz
+					.uncompress(src, dst)
+					.then(() => {
+						resolve(0);
+					})
+					.catch(() => {
+						fs.removeSync(dst);
+						resolve(-2);
+					});
+
 				break;
 			case 'zip':
-				compressing.zip.uncompress(src, dst);
+				fs.mkdirpSync(dst);
+				compressing.zip
+					.uncompress(src, dst)
+					.then(() => {
+						resolve(0);
+					})
+					.catch(() => {
+						fs.removeSync(dst);
+						resolve(-2);
+					});
 				break;
 			default:
 				resolve(-1);
+				break;
 		}
-		resolve(0);
 	});
 }
 function downloadByRequest(remote: string, staged: string, cb: (err: number) => void) {
@@ -260,7 +286,7 @@ async function download(remote: string, staged: string) {
 			console.log('exist staged:' + staged);
 			resolve(0);
 		} else {
-			let r = cp.spawn('curl33', [ '-L', remote, '-o', staged ], { stdio: 'inherit' });
+			let r = cp.spawn('curl', [ '-L', remote, '-o', staged ], { stdio: 'inherit' });
 			r.on('error', (err) => {
 				console.log(err);
 			});
