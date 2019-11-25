@@ -71,7 +71,7 @@ module.exports = () => {
 			__filename: false
 		},
 		//plugins: [ new BundleAnalyzerPlugin() ],
-		devtool: 'source-map',
+		//devtool: 'source-map',
 		target: 'node',
 		mode: 'development' //'production'
 	};

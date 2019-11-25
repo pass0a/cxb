@@ -24,7 +24,14 @@ async function main() {
 	if (argv.b || argv.build) {
 		await build(config);
 	} else if (argv.i || argv.install) {
-		await install(config);
+		let cwd = process.cwd();
+		let r = cwd.indexOf('node_modules');
+		console.log(cwd, r);
+		if (r < 0) {
+			console.log('donot install when process.cwd in this project!!!');
+		} else {
+			await install(config);
+		}
 	}
 	//install('https://passoa-generic.pkg.coding.net/libbt/libbt/master?version=latest', '');
 }
@@ -143,6 +150,9 @@ async function build(config: any) {
 	if (opts.build_cmd) {
 		let build_str = `${opts.platform}_${opts.arch}`;
 		let bc = opts.build_cmd[build_str];
+		if (!bc) {
+			throw new Error(`please check your config for ${build_str}`);
+		}
 		for (const key in bc) {
 			if (bc.hasOwnProperty(key)) {
 				const element = bc[key];
@@ -152,7 +162,7 @@ async function build(config: any) {
 		fs.emptyDirSync(`build/${build_str}`);
 		process.chdir(`build/${build_str}`);
 		bc = [ '../../' ].concat(bc);
-
+		console.log(bc);
 		let r = cp.spawnSync('cmake', bc, { stdio: 'inherit' });
 		if (r.status) {
 			throw new Error('cmake generator fails');
