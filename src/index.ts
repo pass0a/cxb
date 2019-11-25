@@ -7,6 +7,7 @@ import * as url from 'url';
 import * as path from 'path';
 import * as cp from 'child_process';
 import { resolve } from 'dns';
+import { stringify } from 'querystring';
 const Platform = [ 'linux', 'darwin', 'windows', 'android' ];
 const Arch = [ 'x86', 'x64', 'arm', 'arm64' ];
 function slog(msg: string) {
@@ -111,6 +112,39 @@ function arch_format(arch: string) {
 	}
 	return arch;
 }
+function isStringArray(arr: any[]) {
+	for (const iterator of arr) {
+		if (typeof iterator != 'string') return false;
+	}
+	return true;
+}
+function isStringArray2(arr: any[]) {
+	for (const iterator of arr) {
+		if (!Array.isArray(iterator) && !isStringArray(iterator)) return false;
+	}
+	return true;
+}
+function buildByStringArray(build_str: string, opts: any, bc: string[]) {
+	for (const key in bc) {
+		if (bc.hasOwnProperty(key)) {
+			const element = bc[key];
+			bc[key] = eval_template(element, opts);
+		}
+	}
+	fs.emptyDirSync(`build/${build_str}`);
+	process.chdir(`build/${build_str}`);
+	bc = [ '../../' ].concat(bc);
+	console.log(bc);
+	let r = cp.spawnSync('cmake', bc, { stdio: 'inherit' });
+	if (r.status) {
+		throw new Error('cmake generator fails');
+	}
+	r = cp.spawnSync('cmake', [ '--build', './', '--config', 'Release' ], { stdio: 'inherit' });
+	if (r.status) {
+		throw new Error('cmake build fails');
+	}
+	process.chdir('../../');
+}
 async function build(config: any) {
 	let env = process.env;
 	var opts = {
@@ -154,23 +188,17 @@ async function build(config: any) {
 		if (!bc) {
 			throw new Error(`please check your config for ${build_str}`);
 		}
-		for (const key in bc) {
-			if (bc.hasOwnProperty(key)) {
-				const element = bc[key];
-				bc[key] = eval_template(element, opts);
+		if (Array.isArray(bc)) {
+			if (isStringArray(bc)) {
+				buildByStringArray(build_str, opts, bc);
+			} else if (isStringArray2(bc)) {
+				let idx = 0;
+				for (const iterator of bc) {
+					buildByStringArray(`${build_str}_${idx++}`, opts, iterator);
+				}
+			} else {
+				throw new Error(`please check your config for ${build_str}`);
 			}
-		}
-		fs.emptyDirSync(`build/${build_str}`);
-		process.chdir(`build/${build_str}`);
-		bc = [ '../../' ].concat(bc);
-		console.log(bc);
-		let r = cp.spawnSync('cmake', bc, { stdio: 'inherit' });
-		if (r.status) {
-			throw new Error('cmake generator fails');
-		}
-		r = cp.spawnSync('cmake', [ '--build', './', '--config', 'Release' ], { stdio: 'inherit' });
-		if (r.status) {
-			throw new Error('cmake build fails');
 		}
 	}
 }
