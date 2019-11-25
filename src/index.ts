@@ -136,6 +136,7 @@ async function build(config: any) {
 				}
 				let ext = getExt(element, [ 'tar.gz', 'zip' ]);
 				src = `${src}.${ext}`;
+
 				if (await download(element, src)) {
 					fs.removeSync(src);
 					throw new Error(`download ${element} error in build`);
@@ -290,6 +291,7 @@ function downloadByRequest(remote: string, staged: string, cb: (err: number) => 
 }
 //async function downloadByCurl(remote: string, staged: string) {}
 async function download(remote: string, staged: string) {
+	console.log(`downloading file from ${remote} to ${staged}`);
 	return new Promise((resolve) => {
 		fs.mkdirpSync(path.dirname(staged));
 		if (fs.existsSync(staged)) {

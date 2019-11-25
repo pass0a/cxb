@@ -1,6 +1,6 @@
 {
 	"name": "@passoa/cxb",
-	"version": "1.0.6",
+	"version": "1.0.7",
 	"description": "install native modules@passoa",
 	"main": "index.js",
 	"repository": "git+https://github.com/pass0a/cxb.git",
