@@ -15,7 +15,10 @@ function slog(msg: string) {
 	readline.cursorTo(process.stdout, 0, undefined);
 	process.stdout.write(msg);
 }
-
+process.on('unhandledRejection', (error) => {
+	console.error('unhandledRejection', error);
+	process.exit(1); // To exit with a 'failure' code
+});
 main();
 async function main() {
 	let argv = minimist(process.argv.slice(2));
