@@ -1,13 +1,9 @@
 {
 	"name": "@passoa/cxb",
-	"version": "1.0.9",
+	"version": "1.0.10",
 	"description": "install native modules@passoa",
 	"main": "index.js",
-	"files": [
-		"/dist/*.js",
-		"/dist/*/*.d.ts",
-		"/cli.js"
-	],
+	"files": [ "/dist/*.js", "/dist/*/*.d.ts", "/cli.js" ],
 	"repository": "git+https://github.com/pass0a/cxb.git",
 	"bugs": {
 		"url": "https://github.com/pass0a/cxb/issues"
