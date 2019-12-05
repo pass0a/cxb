@@ -6,10 +6,7 @@ import * as readline from 'readline';
 import * as url from 'url';
 import * as path from 'path';
 import * as cp from 'child_process';
-import { resolve } from 'dns';
-import { stringify } from 'querystring';
-const Platform = [ 'linux', 'darwin', 'windows', 'android' ];
-const Arch = [ 'x86', 'x64', 'arm', 'arm64' ];
+
 function slog(msg: string) {
 	//readline.clearLine(process.stdout, 0);
 	readline.cursorTo(process.stdout, 0, undefined);
@@ -142,7 +139,7 @@ function buildByStringArray(build_str: string, opts: any, bc: string[]) {
 	if (r.status) {
 		throw new Error('cmake generator fails');
 	}
-	r = cp.spawnSync('cmake', [ '--build', './', '--config', 'Release' ], { stdio: 'inherit' });
+	r = cp.spawnSync('cmake', [ '--build', './', '--config', opts.configuration ], { stdio: 'inherit' });
 	if (r.status) {
 		throw new Error('cmake build fails');
 	}
@@ -152,7 +149,7 @@ async function build(config: any) {
 	let env = process.env;
 	var opts = {
 		name: config.name,
-		configuration: 'Release',
+		configuration: env.build_type || 'Release',
 		external: config.cxb.external,
 		version: config.version,
 		platform: plat_format(env.platform || process.platform),
