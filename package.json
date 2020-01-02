@@ -1,6 +1,6 @@
 {
 	"name": "@passoa/cxb",
-	"version": "1.0.11",
+	"version": "1.0.12",
 	"description": "install native modules@passoa",
 	"main": "index.js",
 	"files": [ "/dist/*.js", "/dist/*/*.d.ts", "/cli.js" ],
