@@ -54,12 +54,16 @@ function usage(argv: any) {
 	}
 }
 function eval_template(template: string, opts: any) {
-	Object.keys(opts).forEach(function(key) {
-		var pattern = '{' + key + '}';
-		while (template.indexOf(pattern) > -1) {
-			template = template.replace(pattern, opts[key]);
-		}
+	template = template.replace(/\{([a-zA-Z0-9_-]+)\}/g, (str: string, ...args: any[]): string => {
+		let key = opts[args[0]] || process.env[args[0]] || 'undefined';
+		return key;
 	});
+	// Object.keys(opts).forEach(function(key) {
+	// 	var pattern = '{' + key + '}';
+	// 	while (template.indexOf(pattern) > -1) {
+	// 		template = template.replace(pattern, opts[key]);
+	// 	}
+	// });
 	return template;
 }
 
@@ -168,7 +172,7 @@ async function build(config: any) {
 				if (fs.existsSync(dst)) {
 					break;
 				}
-				let ext = getExt(element, [ 'tar.gz', 'zip' ]);
+				let ext = getExt(element, [ 'tgz', 'tar.gz', 'zip', 'gz' ]);
 				src = `${src}.${ext}`;
 
 				if (await download(element, src)) {
@@ -240,9 +244,10 @@ async function install(config: any) {
 }
 async function uncompress(src: string, dst: string) {
 	return new Promise((resolve) => {
-		let ext = getExt(src, [ 'tar.gz', 'zip' ]);
+		let ext = getExt(src, [ 'tgz', 'tar.gz', 'zip', 'gz' ]);
 
 		switch (ext) {
+			case 'tgz':
 			case 'tar.gz':
 				fs.mkdirpSync(dst);
 				compressing.tgz
@@ -255,6 +260,30 @@ async function uncompress(src: string, dst: string) {
 						resolve(-2);
 					});
 
+				break;
+			case 'tar':
+				fs.mkdirpSync(dst);
+				compressing.tar
+					.uncompress(src, dst)
+					.then(() => {
+						resolve(0);
+					})
+					.catch(() => {
+						fs.removeSync(dst);
+						resolve(-2);
+					});
+				break;
+			case 'gz':
+				fs.mkdirpSync(dst);
+				compressing.gzip
+					.uncompress(src, dst)
+					.then(() => {
+						resolve(0);
+					})
+					.catch(() => {
+						fs.removeSync(dst);
+						resolve(-2);
+					});
 				break;
 			case 'zip':
 				fs.mkdirpSync(dst);
