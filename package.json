@@ -1,6 +1,6 @@
 {
 	"name": "@passoa/cxb",
-	"version": "1.2.0",
+	"version": "1.0.13",
 	"description": "install native modules@passoa",
 	"main": "index.js",
 	"types": "lib/index.d.ts",
@@ -18,7 +18,7 @@
 		"build": "rimraf dist/ && tsc -p src",
 		"dev": "rimraf dist/ && tsc -w -p src",
 		"test": "node dist/index.js -b",
-		"release": "standard-version"
+		"release": "standard-version -r patch"
 	},
 	"author": "losper",
 	"license": "MIT",
