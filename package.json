@@ -1,18 +1,25 @@
 {
 	"name": "@passoa/cxb",
-	"version": "1.0.12",
+	"version": "1.1.0",
 	"description": "install native modules@passoa",
 	"main": "index.js",
-	"files": [ "/dist/*.js", "/dist/*/*.d.ts", "/cli.js" ],
+	"types": "lib/index.d.ts",
+	"files": [
+		"/lib/*.js",
+		"/lib/*.d.ts",
+		"/cli.js"
+	],
 	"repository": "git+https://github.com/pass0a/cxb.git",
 	"bugs": {
 		"url": "https://github.com/pass0a/cxb/issues"
 	},
 	"homepage": "https://github.com/pass0a/cxb#readme",
 	"scripts": {
-		"build": "rimraf dist/ && cross-env opt=build webpack",
-		"dev": "rimraf dist/ && cross-env opt=dev webpack",
-		"test": "node dist/index.js -b"
+		"build": "rimraf dist/ && tsc -p src",
+		"dev": "rimraf dist/ && tsc -w -p src",
+		"test": "node dist/index.js -b",
+		"commit": "git-cz",
+		"release": "standard-version"
 	},
 	"author": "losper",
 	"license": "MIT",
@@ -20,27 +27,40 @@
 		"cxb": "./cli.js"
 	},
 	"dependencies": {
+		"@commitlint/cli": "^8.3.5",
+		"@commitlint/config-conventional": "^8.3.4",
+		"commitizen": "^4.0.3",
 		"compressing": "^1.4.0",
+		"cz-conventional-changelog": "^3.1.0",
+		"debug": "^4",
 		"fs-extra": "^8.1.0",
+		"husky": "^4.2.3",
+		"is-iojs": "^1.0.1",
+		"memory-stream": "0",
 		"minimist": "^1.2.0",
-		"request": "^2.88.0"
+		"npmlog": "^1.2.0",
+		"request": "^2.88.0",
+		"tar": "^4",
+		"unzipper": "^0.8.13",
+		"url-join": "0"
 	},
 	"devDependencies": {
-		"@babel/core": "^7.5.5",
-		"@babel/preset-env": "^7.5.5",
-		"@types/request": "^2.48.3",
-		"@types/mkdirp": "^0.5.2",
-		"@types/node": "^12.6.8",
-		"@types/tape": "^4.2.33",
+		"@semantic-release/git": "^9.0.0",
 		"@types/fs-extra": "^8.0.1",
 		"@types/minimist": "^1.2.0",
-		"babel-loader": "^8.0.6",
-		"rimraf": "^2.6.3",
+		"@types/mkdirp": "^0.5.2",
+		"@types/node": "^12.6.8",
+		"@types/request": "^2.48.3",
+		"@types/tape": "^4.2.33",
 		"cross-env": "^6.0.3",
-		"ts-loader": "^6.0.4",
-		"typescript": "^3.5.3",
-		"webpack": "^4.36.1",
-		"webpack-bundle-analyzer": "^3.3.2",
-		"webpack-cli": "^3.3.6"
+		"rimraf": "^2.6.3",
+		"semantic-release": "^17.0.4",
+		"standard-version": "^7.1.0",
+		"typescript": "^3.5.3"
+	},
+	"husky": {
+		"hooks": {
+			"commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
+		}
 	}
 }

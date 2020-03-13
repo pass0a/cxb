@@ -6,6 +6,7 @@ import * as readline from 'readline';
 import * as url from 'url';
 import * as path from 'path';
 import * as cp from 'child_process';
+import { Dist } from './dist';
 
 function slog(msg: string) {
 	//readline.clearLine(process.stdout, 0);
@@ -18,9 +19,11 @@ process.on('unhandledRejection', (error) => {
 });
 main();
 async function main() {
+	let dist = new Dist();
+	await dist.ensureDownloaded();
 	let argv = minimist(process.argv.slice(2));
 	usage(argv);
-	const context = fs.readFileSync('./package.json', 'utf8');
+	const context = fs.readFileSync('./cxb.json', 'utf8');
 	let config = JSON.parse(context);
 	if (argv.b || argv.build) {
 		await build(config);
@@ -33,6 +36,8 @@ async function main() {
 		} else {
 			await install(config);
 		}
+	} else {
+		console.log('cxb: show help with --help');
 	}
 	//install('https://passoa-generic.pkg.coding.net/libbt/libbt/master?version=latest', '');
 }
@@ -207,6 +212,7 @@ async function build(config: any) {
 	}
 }
 async function install(config: any) {
+	console.log(config);
 	let env = process.env;
 	let cxb = config.cxb;
 	var opts = {
