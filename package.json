@@ -1,14 +1,10 @@
 {
 	"name": "@passoa/cxb",
-	"version": "1.1.0",
+	"version": "1.0.12",
 	"description": "install native modules@passoa",
 	"main": "index.js",
 	"types": "lib/index.d.ts",
-	"files": [
-		"/lib/*.js",
-		"/lib/*.d.ts",
-		"/cli.js"
-	],
+	"files": [ "/lib/*.js", "/lib/*.d.ts", "/cli.js" ],
 	"repository": "git+https://github.com/pass0a/cxb.git",
 	"bugs": {
 		"url": "https://github.com/pass0a/cxb/issues"
@@ -18,7 +14,6 @@
 		"build": "rimraf dist/ && tsc -p src",
 		"dev": "rimraf dist/ && tsc -w -p src",
 		"test": "node dist/index.js -b",
-		"commit": "git-cz",
 		"release": "standard-version"
 	},
 	"author": "losper",
@@ -27,11 +22,7 @@
 		"cxb": "./cli.js"
 	},
 	"dependencies": {
-		"@commitlint/cli": "^8.3.5",
-		"@commitlint/config-conventional": "^8.3.4",
-		"commitizen": "^4.0.3",
 		"compressing": "^1.4.0",
-		"cz-conventional-changelog": "^3.1.0",
 		"debug": "^4",
 		"fs-extra": "^8.1.0",
 		"husky": "^4.2.3",
@@ -45,7 +36,6 @@
 		"url-join": "0"
 	},
 	"devDependencies": {
-		"@semantic-release/git": "^9.0.0",
 		"@types/fs-extra": "^8.0.1",
 		"@types/minimist": "^1.2.0",
 		"@types/mkdirp": "^0.5.2",
@@ -54,13 +44,7 @@
 		"@types/tape": "^4.2.33",
 		"cross-env": "^6.0.3",
 		"rimraf": "^2.6.3",
-		"semantic-release": "^17.0.4",
 		"standard-version": "^7.1.0",
 		"typescript": "^3.5.3"
-	},
-	"husky": {
-		"hooks": {
-			"commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
-		}
 	}
 }
