@@ -4,20 +4,16 @@
 	"description": "install native modules@passoa",
 	"main": "index.js",
 	"types": "lib/index.d.ts",
-	"files": [
-		"/lib/*.js",
-		"/lib/*.d.ts",
-		"/cli.js"
-	],
+	"files": [ "/lib/*.js", "/lib/*.d.ts", "/cli.js" ],
 	"repository": "git+https://github.com/pass0a/cxb.git",
 	"bugs": {
 		"url": "https://github.com/pass0a/cxb/issues"
 	},
 	"homepage": "https://github.com/pass0a/cxb#readme",
 	"scripts": {
-		"build": "rimraf dist/ && tsc -p src",
-		"dev": "rimraf dist/ && tsc -w -p src",
-		"test": "node dist/index.js -b",
+		"build": "rimraf lib/ && tsc -p src",
+		"dev": "rimraf lib/ && tsc -w -p src",
+		"test": "cross-env platform=node arch=x86 node lib/index.js -b",
 		"release": "standard-version -r patch"
 	},
 	"author": "losper",
