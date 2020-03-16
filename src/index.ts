@@ -7,7 +7,12 @@ import * as url from 'url';
 import * as path from 'path';
 import * as cp from 'child_process';
 import { Dist } from './dist';
+import * as environment from './environment';
+let dist = new Dist();
 
+interface ConfigObject {
+	[key: string]: any;
+}
 function slog(msg: string) {
 	//readline.clearLine(process.stdout, 0);
 	readline.cursorTo(process.stdout, 0, undefined);
@@ -18,13 +23,46 @@ process.on('unhandledRejection', (error) => {
 	process.exit(1); // To exit with a 'failure' code
 });
 main();
+function initConfig(): ConfigObject {
+	const pkg = require(`${process.cwd()}/package.json`);
+	let env = process.env;
+	let config = {
+		name: pkg.name,
+		configuration: env.build_type || 'Release',
+		external: [],
+		version: pkg.version,
+		platform: plat_format(env.platform || process.platform),
+		arch: arch_format(env.arch || process.arch),
+		build_cmd: [],
+		toolset_path: env.toolset_path || '',
+		make_path: env.make_path || 'make',
+		module_name: pkg.name,
+		module_path: 'lib',
+		remote_path: 'repertory/cxb/',
+		package_name: '',
+		host: '',
+		hosted_path: '',
+		hosted_tarball: '',
+		staged_tarball: '',
+		root_dir: process.cwd()
+	};
+	const opts: ConfigObject = require(`${config.root_dir}/cxb.config.js`)(config);
+	mergeConfig(config, opts);
+	return config;
+}
+function mergeConfig(config: ConfigObject, opts: ConfigObject) {
+	for (const key in opts) {
+		if (opts.hasOwnProperty(key) && config.hasOwnProperty(key)) {
+			config[key] = opts[key];
+		}
+	}
+}
+
 async function main() {
-	let dist = new Dist();
-	await dist.ensureDownloaded();
 	let argv = minimist(process.argv.slice(2));
 	usage(argv);
-	const context = fs.readFileSync('./cxb.json', 'utf8');
-	let config = JSON.parse(context);
+	await dist.ensureDownloaded();
+	let config = initConfig();
 	if (argv.b || argv.build) {
 		await build(config);
 	} else if (argv.i || argv.install) {
@@ -133,6 +171,26 @@ function isStringArray2(arr: any[]) {
 	}
 	return true;
 }
+function addDefaultCmd(bc: string[]) {
+	let incPaths;
+	if (dist.headerOnly) {
+		incPaths = [ path.join(dist.internalPath, '/include/node') ];
+	} else {
+		let nodeH = path.join(dist.internalPath, '/src');
+		let v8H = path.join(dist.internalPath, '/deps/v8/include');
+		let uvH = path.join(dist.internalPath, '/deps/uv/include');
+		incPaths = [ nodeH, v8H, uvH ];
+	}
+	// Includes:
+	bc.push(`-DCMAKE_JS_INC=${incPaths.join(';')}`);
+	if (environment.isWin) {
+		// Win
+		let libs = dist.winLibs;
+		if (libs.length) {
+			bc.push(`-DCMAKE_JS_LIB=${libs.join(';')}`);
+		}
+	}
+}
 function buildByStringArray(build_str: string, opts: any, bc: string[]) {
 	for (const key in bc) {
 		if (bc.hasOwnProperty(key)) {
@@ -140,10 +198,14 @@ function buildByStringArray(build_str: string, opts: any, bc: string[]) {
 			bc[key] = eval_template(element, opts);
 		}
 	}
+
 	fs.emptyDirSync(`build/${build_str}`);
 	process.chdir(`build/${build_str}`);
+
 	bc = [ '../../' ].concat(bc);
+	addDefaultCmd(bc);
 	console.log(bc);
+
 	let r = cp.spawnSync('cmake', bc, { stdio: 'inherit' });
 	if (r.status) {
 		throw new Error('cmake generator fails');
@@ -155,25 +217,13 @@ function buildByStringArray(build_str: string, opts: any, bc: string[]) {
 	process.chdir('../../');
 }
 async function build(config: any) {
-	let env = process.env;
-	var opts = {
-		name: config.name,
-		configuration: env.build_type || 'Release',
-		external: config.cxb.external,
-		version: config.version,
-		platform: plat_format(env.platform || process.platform),
-		arch: arch_format(env.arch || process.arch),
-		build_cmd: config.cxb.build_cmd,
-		toolset_path: env.toolset_path || '',
-		make_path: env.make_path || 'make'
-	};
-
-	if (opts.external) {
-		for (const key in opts.external) {
-			if (opts.external.hasOwnProperty(key)) {
-				const element = opts.external[key];
-				let src = path.join('build/stage', key);
-				let dst = path.join('3rd', key);
+	if (config.external) {
+		for (const key in config.external) {
+			if (config.external.hasOwnProperty(key)) {
+				const element = config.external[key];
+				let src = path.join(`${config.root_dir}/build/stage`, key);
+				let dst = path.join(`${config.root_dir}/3rd`, key);
+				console.log('test:', dst);
 				if (fs.existsSync(dst)) {
 					break;
 				}
@@ -191,19 +241,19 @@ async function build(config: any) {
 			}
 		}
 	}
-	if (opts.build_cmd) {
-		let build_str = `${opts.platform}_${opts.arch}`;
-		let bc = opts.build_cmd[build_str];
+	if (config.build_cmd) {
+		let build_str = `${config.platform}_${config.arch}`;
+		let bc = config.build_cmd[build_str];
 		if (!bc) {
 			throw new Error(`please check your config for ${build_str}`);
 		}
 		if (Array.isArray(bc)) {
 			if (isStringArray(bc)) {
-				buildByStringArray(build_str, opts, bc);
+				buildByStringArray(build_str, config, bc);
 			} else if (isStringArray2(bc)) {
 				let idx = 0;
 				for (const iterator of bc) {
-					buildByStringArray(`${build_str}_${idx++}`, opts, iterator);
+					buildByStringArray(`${build_str}_${idx++}`, config, iterator);
 				}
 			} else {
 				throw new Error(`please check your config for ${build_str}`);
@@ -212,41 +262,19 @@ async function build(config: any) {
 	}
 }
 async function install(config: any) {
+	config.hosted_path = url.resolve(config.host, config.remote_path);
+	config.hosted_tarball = url.resolve(config.hosted_path, config.package_name);
+	let tarball = `${config.module_name}-v${config.version}-${config.platform}-${config.arch}.tar.gz`;
+	config.staged_tarball = path.join('build/stage', tarball);
 	console.log(config);
-	let env = process.env;
-	let cxb = config.cxb;
-	var opts = {
-		name: config.name,
-		configuration: 'Release',
-		module_name: '',
-		module_path: '',
-		remote_path: '',
-		package_name: cxb.binary.package_name,
-		host: '',
-		version: config.version,
-		platform: plat_format(env.platform || process.platform),
-		arch: arch_format(env.arch || process.arch),
-		hosted_path: '',
-		hosted_tarball: '',
-		staged_tarball: ''
-	};
-	opts.host = fix_slashes(eval_template(cxb.binary.host, opts));
-	opts.module_name = eval_template(cxb.binary.module_name, opts);
-	opts.module_path = eval_template(cxb.binary.module_path, opts);
-	opts.package_name = eval_template(cxb.binary.package_name, opts);
-	opts.remote_path = eval_template(cxb.binary.remote_path, opts);
-	opts.hosted_path = url.resolve(opts.host, opts.remote_path);
-	opts.hosted_tarball = url.resolve(opts.hosted_path, opts.package_name);
-	let tarball = `${opts.module_name}-v${opts.version}-${opts.platform}-${opts.arch}.tar.gz`;
-	opts.staged_tarball = path.join('build/stage', tarball);
-	if (await download(opts.hosted_tarball, opts.staged_tarball)) {
-		fs.removeSync(opts.staged_tarball);
-		throw new Error(`download ${opts.hosted_tarball} error in install`);
-	}
-	if (await uncompress(opts.staged_tarball, opts.module_path)) {
-		fs.removeSync(opts.staged_tarball);
-		throw new Error(`uncompress ${opts.staged_tarball} error in install`);
-	}
+	// if (await download(config.hosted_tarball, config.staged_tarball)) {
+	// 	fs.removeSync(config.staged_tarball);
+	// 	throw new Error(`download ${config.hosted_tarball} error in install`);
+	// }
+	// if (await uncompress(config.staged_tarball, config.module_path)) {
+	// 	fs.removeSync(config.staged_tarball);
+	// 	throw new Error(`uncompress ${config.staged_tarball} error in install`);
+	// }
 }
 async function uncompress(src: string, dst: string) {
 	return new Promise((resolve) => {

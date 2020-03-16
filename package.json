@@ -11,9 +11,9 @@
 	},
 	"homepage": "https://github.com/pass0a/cxb#readme",
 	"scripts": {
-		"build": "rimraf dist/ && tsc -p src",
-		"dev": "rimraf dist/ && tsc -w -p src",
-		"test": "node dist/index.js -b",
+		"build": "rimraf lib/ && tsc -p src",
+		"dev": "rimraf lib/ && tsc -w -p src",
+		"test": "cross-env platform=node arch=x86 node lib/index.js -b",
 		"patch": "standard-version -r patch",
 		"minor": "standard-version -r minor",
 		"major": "standard-version -r major"
