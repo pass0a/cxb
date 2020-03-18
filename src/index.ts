@@ -1,14 +1,15 @@
-import * as compressing from 'compressing';
 import * as fs from 'fs-extra';
 import * as minimist from 'minimist';
-import * as request from 'request';
 import * as readline from 'readline';
 import * as url from 'url';
 import * as path from 'path';
 import * as cp from 'child_process';
 import { Dist } from './dist';
 import * as environment from './environment';
+import { Downloader, ifKy } from './downloader';
+import { isArray, isString } from 'util';
 let dist = new Dist();
+let downloader = new Downloader({});
 
 interface ConfigObject {
 	[key: string]: any;
@@ -127,18 +128,7 @@ function fix_slashes(pathname: string) {
 function drop_double_slashes(pathname: string) {
 	return pathname.replace(/\/\//g, '/');
 }
-function getExt(filename: string, extlist: string[]): string {
-	let found: string = '';
-	for (let ext of extlist) {
-		if (filename.endsWith('.' + ext)) {
-			if (found.length < ext.length) {
-				found = ext;
-			}
-		}
-		console.log(filename, found, ext);
-	}
-	return found;
-}
+
 function plat_format(plat: string) {
 	switch (plat) {
 		case 'win32':
@@ -216,30 +206,35 @@ function buildByStringArray(build_str: string, opts: any, bc: string[]) {
 	}
 	process.chdir('../../');
 }
+
 async function build(config: any) {
 	if (config.external) {
+		let task1 = new Array<ifKy>(),
+			task2 = new Array<ifKy>();
 		for (const key in config.external) {
 			if (config.external.hasOwnProperty(key)) {
-				const element = config.external[key];
-				let src = path.join(`${config.root_dir}/build/stage`, key);
+				const obj = config.external[key];
+				let url = '';
+				if (isArray(obj)) {
+					url = obj[0];
+				} else if (isString(obj)) {
+					url = obj;
+				} else {
+					throw new Error('cxb.external config has error');
+				}
+				let tmp = `${config.root_dir}/build/stage/${key}/${path.basename(url)}`;
 				let dst = path.join(`${config.root_dir}/3rd`, key);
-				console.log('test:', dst);
+
 				if (fs.existsSync(dst)) {
 					break;
 				}
-				let ext = getExt(element, [ 'tgz', 'tar.gz', 'zip', 'gz' ]);
-				src = `${src}.${ext}`;
-
-				if (await download(element, src)) {
-					fs.removeSync(src);
-					throw new Error(`download ${element} error in build`);
-				}
-				if (await uncompress(src, dst)) {
-					fs.removeSync(src);
-					throw new Error(`uncompress ${src} error in build`);
-				}
+				console.log(url, tmp);
+				task1.push({ src: url, dst: tmp });
+				task2.push({ src: tmp, dst: dst, option: { strip: obj[1] } });
 			}
 		}
+		await downloader.downloadAll(task1);
+		await downloader.unzipAll(task2);
 	}
 	if (config.build_cmd) {
 		let build_str = `${config.platform}_${config.arch}`;
@@ -275,136 +270,4 @@ async function install(config: any) {
 	// 	fs.removeSync(config.staged_tarball);
 	// 	throw new Error(`uncompress ${config.staged_tarball} error in install`);
 	// }
-}
-async function uncompress(src: string, dst: string) {
-	return new Promise((resolve) => {
-		let ext = getExt(src, [ 'tgz', 'tar.gz', 'zip', 'gz' ]);
-
-		switch (ext) {
-			case 'tgz':
-			case 'tar.gz':
-				fs.mkdirpSync(dst);
-				compressing.tgz
-					.uncompress(src, dst)
-					.then(() => {
-						resolve(0);
-					})
-					.catch(() => {
-						fs.removeSync(dst);
-						resolve(-2);
-					});
-
-				break;
-			case 'tar':
-				fs.mkdirpSync(dst);
-				compressing.tar
-					.uncompress(src, dst)
-					.then(() => {
-						resolve(0);
-					})
-					.catch(() => {
-						fs.removeSync(dst);
-						resolve(-2);
-					});
-				break;
-			case 'gz':
-				fs.mkdirpSync(dst);
-				compressing.gzip
-					.uncompress(src, dst)
-					.then(() => {
-						resolve(0);
-					})
-					.catch(() => {
-						fs.removeSync(dst);
-						resolve(-2);
-					});
-				break;
-			case 'zip':
-				fs.mkdirpSync(dst);
-				compressing.zip
-					.uncompress(src, dst)
-					.then(() => {
-						resolve(0);
-					})
-					.catch(() => {
-						fs.removeSync(dst);
-						resolve(-2);
-					});
-				break;
-			default:
-				resolve(-1);
-				break;
-		}
-	});
-}
-function downloadByRequest(remote: string, staged: string, cb: (err: number) => void) {
-	let total = 0,
-		cur = 0,
-		len = 0,
-		err = 0;
-	request
-		.get(remote)
-		.on('response', function(response) {
-			err = response.statusCode == 200 ? 0 : -2; // 200
-			let tmp = response.headers['content-length'];
-			if (tmp) {
-				len = parseInt(tmp, 10);
-				total = len / (1024 * 1024);
-			}
-		})
-		.on('data', (chunk) => {
-			cur += chunk.length;
-			if (len > 0) {
-				slog(
-					'Downloading ' +
-						(100.0 * cur / len).toFixed(2) +
-						'% ' +
-						(cur / 1048576).toFixed(2) +
-						' ' +
-						'. Total size: ' +
-						total.toFixed(2) +
-						' mb'
-				);
-			} else {
-				slog('Downloading ' + (cur / 1024).toFixed(2) + 'kb ' + '. Total size: unknow mb');
-			}
-		})
-		.on('error', (code) => {
-			console.log(code);
-			err = -1;
-			cb(-1);
-		})
-		.on('end', () => {
-			console.log('\r\n');
-			cb(err);
-		})
-		.pipe(fs.createWriteStream(staged));
-}
-//async function downloadByCurl(remote: string, staged: string) {}
-async function download(remote: string, staged: string) {
-	console.log(`downloading file from ${remote} to ${staged}`);
-	return new Promise((resolve) => {
-		fs.mkdirpSync(path.dirname(staged));
-		if (fs.existsSync(staged)) {
-			console.log('exist staged:' + staged);
-			resolve(0);
-		} else {
-			let r = cp.spawn('curl', [ '-L', remote, '-o', staged ], { stdio: 'inherit' });
-			r.on('error', (err) => {
-				console.log(err);
-			});
-			r.on('close', (code) => {
-				if (code) {
-					console.log('downloadByCurl:' + code);
-					downloadByRequest(remote, staged, (err) => {
-						console.log('downloadByRequest:' + err);
-						resolve(err);
-					});
-				} else {
-					resolve(0);
-				}
-			});
-		}
-	});
-	//return await downloadByCurl(remote, staged);
 }

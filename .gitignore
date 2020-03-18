@@ -40,4 +40,4 @@ dist
 *.map
 package-lock.json
 tmp
-
+build

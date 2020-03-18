@@ -1,15 +1,11 @@
-import * as crypto from 'crypto';
 import { CMLog, ifCMLog } from './cmLog';
 import { isNumber, isString } from 'util';
-import * as fs from 'fs';
+import * as fs from 'fs-extra';
 import * as readline from 'readline';
-let request = require('request');
-
-let MemoryStream = require('memory-stream');
-let zlib = require('zlib');
-let tar = require('tar');
-
-let unzip = require('unzipper');
+import * as path from 'path';
+import axios from 'axios';
+import { gzip, tgz, zip, streamHeader } from 'compressing';
+import { resolve } from 'dns';
 
 function slog(msg: string) {
 	//readline.clearLine(process.stdout, 0);
@@ -17,121 +13,152 @@ function slog(msg: string) {
 	process.stdout.write(msg);
 }
 
-export interface ifDLOptions {
-	path?: string;
-	hash?: string;
-	sum?: string;
-	cwd?: string;
-	strip?: number;
+export interface optUnZip {
+	strip: number;
 	filter?: (entryPath: string) => boolean;
+}
+export interface ifKy {
+	src: string;
+	dst: string;
+	option?: optUnZip;
 }
 export class Downloader {
 	private log: CMLog;
+	private done: number = 0;
+	private length: number = 0;
 	constructor(options: ifCMLog) {
 		this.log = new CMLog(options);
 	}
-	downloadToStream(url: string, stream: any, hash?: string): Promise<string> {
-		let self = this;
-		let shasum = hash ? crypto.createHash(hash) : null;
-		return new Promise(function(resolve, reject) {
-			let length = 0;
-			let done = 0;
-			let lastPercent = 0;
-			request
-				.get(url)
-				.on('error', function(err: any) {
-					reject(err);
-				})
-				.on('response', function(data: any) {
-					length = parseInt(data.headers['content-length']);
-					if (isNumber(length)) {
-						length = 0;
-					}
-				})
-				.on('data', function(chunk: any) {
-					if (shasum) {
-						shasum.update(chunk);
-					}
-					done += chunk.length;
-					if (length) {
-						let percent = done / length * 100;
-						percent = Math.round(percent / 10) * 10 + 10;
-						if (percent > lastPercent) {
-							slog(
-								`Downloading ${(done / 1024).toFixed(
-									2
-								)} kb . Total size: ${length} kb . per:${lastPercent}%`
-							);
-							lastPercent = percent;
+	async downloadAll(task: ifKy[]) {
+		let op = [];
+		for (const iter of task) {
+			op.push(this.downloadFile(iter));
+		}
+		await Promise.all(op);
+		console.log('\ndownload all end\n');
+	}
+	private downloadFile(iter: ifKy): Promise<boolean> {
+		return new Promise((resolve, reject) => {
+			axios({
+				method: 'get',
+				url: iter.src,
+				responseType: 'stream'
+			})
+				.then((response) => {
+					this.length += parseInt(response.headers['content-length'], 10);
+					fs.ensureDir(path.dirname(iter.dst));
+					response.data.on('data', (chunk: Buffer) => {
+						this.done += chunk.length;
+						if (isNaN(this.length)) {
+							slog(`Downloading ${(this.done / 1024).toFixed(2)}/ unknow kb`);
+						} else {
+							slog(`Downloading ${(this.done / 1024).toFixed(2)}/ ${(this.length / 1024).toFixed(2)} kb`);
 						}
-					} else {
-						slog(`Downloading ${(done / 1024).toFixed(2)} kb . Total size: unkown kb . per:unkown`);
-					}
+					});
+					response.data.pipe(
+						fs
+							.createWriteStream(iter.dst)
+							.on('close', () => {
+								resolve(true);
+							})
+							.on('error', (err) => {
+								throw new Error(`some error was happend with write file ${iter.src}`);
+							})
+							.on('finish', () => {})
+					);
 				})
-				.pipe(stream);
-
-			stream.once('error', function(err: any) {
-				reject(err);
+				.catch((err) => {
+					throw new Error(`some error was happend with download file ${iter.src}`);
+				});
+		});
+	}
+	getExt(filename: string, extlist: string[]): string {
+		let found: string = '';
+		for (let ext of extlist) {
+			if (filename.endsWith('.' + ext)) {
+				if (found.length < ext.length) {
+					found = ext;
+				}
+			}
+		}
+		return found;
+	}
+	async unzipAll(task: ifKy[]) {
+		let op = [];
+		for (const iter of task) {
+			let ext = this.getExt(iter.src, [ 'tgz', 'tar.gz', 'zip', 'gz', 'gzip' ]);
+			switch (ext) {
+				case 'tgz':
+				case 'tar.gz':
+					op.push(this.uncompressingTgz(iter));
+					break;
+				case 'zip':
+					op.push(this.uncompressingZip(iter));
+					break;
+				case 'gz':
+				case 'gzip':
+					op.push(this.uncompressingGZip(iter));
+					break;
+			}
+		}
+		await Promise.all(op);
+		console.log('\nunzip all end\n');
+	}
+	private handleError(err: Error) {
+		console.log(err.stack);
+	}
+	private handleFinish() {}
+	private strip(str: string, deep: number) {
+		let arr = path.normalize(str).split(path.sep);
+		arr.splice(0, arr.length < deep ? arr.length - 1 : deep);
+		return arr.join(path.sep);
+	}
+	private onEntry(iter: ifKy, header: any, stream: any, next: () => void) {
+		stream.on('end', next);
+		if (iter.option && iter.option.strip) header.name = this.strip(header.name, iter.option.strip);
+		console.log(header.name);
+		if (header.type === 'file') {
+			fs.ensureDir(path.dirname(path.join(iter.dst, header.name)), {}, (err) => {
+				if (err) return this.handleError(err);
+				stream.pipe(fs.createWriteStream(path.join(iter.dst, header.name)));
 			});
-
-			stream.once('finish', function() {
-				console.log('\n');
-				resolve(shasum ? shasum.digest('hex') : undefined);
+		} else {
+			// directory
+			fs.ensureDir(path.join(iter.dst, header.name), {}, (err) => {
+				if (err) return this.handleError(err);
+				stream.resume();
 			});
+		}
+	}
+	uncompressingTgz(iter: ifKy): Promise<boolean> {
+		return new Promise((resolve, reject) => {
+			new tgz.UncompressStream({ source: iter.src })
+				.on('error', this.handleError)
+				.on('finish', this.handleFinish) // uncompressing is done
+				.on('entry', (header, stream, next) => {
+					this.onEntry(iter, header, stream, next);
+				});
 		});
 	}
 
-	async downloadString(url: string) {
-		let result = new MemoryStream();
-		await this.downloadToStream(url, result);
-		return result.toString();
+	uncompressingZip(iter: ifKy): Promise<boolean> {
+		return new Promise((resolve, reject) => {
+			new zip.UncompressStream({ source: iter.src })
+				.on('error', this.handleError)
+				.on('finish', this.handleFinish) // uncompressing is done
+				.on('entry', (header, stream, next) => {
+					this.onEntry(iter, header, stream, next);
+				});
+		});
 	}
-
-	async downloadFile(url: string, options: ifDLOptions | string) {
-		let opt: ifDLOptions = { path: '' };
-		if (isString(options)) {
-			opt = { path: options };
-		} else {
-			opt = options;
-		}
-		if (!opt.path) throw new Error('can not download null file with opt.path was undefined');
-		let result = fs.createWriteStream(opt.path);
-		let sum = await this.downloadToStream(url, result, opt.hash);
-		this.testSum(url, sum, opt);
-		return sum;
-	}
-
-	async downloadTgz(url: string, options: ifDLOptions | string) {
-		let opt: ifDLOptions = { path: '' };
-		if (isString(options)) {
-			opt = { path: options };
-		} else {
-			opt = options;
-		}
-		let gunzip = zlib.createGunzip();
-		let extractor = tar.extract(opt);
-		gunzip.pipe(extractor);
-		let sum = await this.downloadToStream(url, gunzip, opt.hash);
-		this.testSum(url, sum, opt);
-		return sum;
-	}
-
-	async downloadZip(url: string, options: ifDLOptions | string) {
-		let opt: ifDLOptions = { path: '' };
-		if (isString(options)) {
-			opt = { path: options };
-		} else {
-			opt = options;
-		}
-		let extractor = new unzip.Extract(opt);
-		let sum = await this.downloadToStream(url, extractor, opt.hash);
-		this.testSum(url, sum, opt);
-		return sum;
-	}
-
-	testSum(url: string, sum: string, options: ifDLOptions) {
-		if (options.hash && sum && options.sum && options.sum !== sum) {
-			throw new Error(options.hash.toUpperCase() + " sum of download '" + url + "' mismatch!");
-		}
+	uncompressingGZip(iter: ifKy): Promise<boolean> {
+		return new Promise((resolve, reject) => {
+			new gzip.UncompressStream({ source: iter.src })
+				.on('error', this.handleError)
+				.on('finish', this.handleFinish) // uncompressing is done
+				.on('entry', (header, stream, next) => {
+					this.onEntry(iter, header, stream, next);
+				});
+		});
 	}
 }

@@ -6,20 +6,8 @@ let fs = require('fs-extra');
 import { CMLog } from './cmLog';
 import { TargetOptions } from './targetOptions';
 import { runtimePaths } from './runtimePaths';
-import { Downloader } from './downloader';
+import { Downloader, ifKy } from './downloader';
 
-function testSum(sums: string[], sum: string, fPath: string) {
-	// let serverSum = _.first(
-	// 	sums.filter(function(s) {
-	// 		return s.getPath === fPath;
-	// 	})
-	// );
-	// if (serverSum && serverSum.sum === sum) {
-	// 	return;
-	// }
-	return true;
-	throw new Error("SHA sum of file '" + fPath + "' mismatch!");
-}
 interface DistOptions {
 	[key: string]: any;
 }
@@ -105,58 +93,27 @@ export class Dist {
 		let log = this.log;
 		log.info('DIST', 'Downloading distribution files.');
 		await fs.ensureDir(this.internalPath);
-		let sums = await this._downloadShaSums();
-		await Promise.all([ this._downloadLibs(sums), this._downloadTar(sums) ]);
+		//let sums = await this._downloadShaSums();
+		let task1 = new Array<ifKy>(),
+			task2 = new Array<ifKy>();
+		this._downloadLibs(task1);
+		this._downloadTar(task1, task2);
+		await this.downloader.downloadAll(task1);
+		await this.downloader.unzipAll(task2);
 	}
 
-	async _downloadShaSums() {
-		if (this.targetOptions.runtime === 'node' || this.targetOptions.runtime === 'iojs') {
-			let sumUrl = urljoin(this.externalPath, 'SHASUMS256.txt');
-			let log = this.log;
-			log.http('DIST', '\t- ' + sumUrl);
-			return (await this.downloader.downloadString(sumUrl))
-				.split('\n')
-				.map(function(line: string) {
-					let parts = line.split(/\s+/);
-					return {
-						getPath: parts[1],
-						sum: parts[0]
-					};
-				})
-				.filter(function(i: any) {
-					return i.getPath && i.sum;
-				});
-		} else {
-			return null;
-		}
-	}
-
-	async _downloadTar(sums: string[]) {
+	async _downloadTar(task1: ifKy[], task2: ifKy[]) {
 		let log = this.log;
 		let self = this;
 		let tarLocalPath = runtimePaths.get(self.targetOptions).tarPath;
 		let tarUrl = urljoin(self.externalPath, tarLocalPath);
 		log.http('DIST', '\t- ' + tarUrl);
-
-		let sum = await this.downloader.downloadTgz(tarUrl, {
-			hash: sums ? 'sha256' : undefined,
-			cwd: self.internalPath,
-			strip: 1,
-			filter: function(entryPath: string) {
-				if (entryPath === self.internalPath) {
-					return true;
-				}
-				let ext = path.extname(entryPath);
-				return ext && ext.toLowerCase() === '.h';
-			}
-		});
-
-		if (sums) {
-			testSum(sums, sum, tarLocalPath);
-		}
+		fs.ensureDirSync('build/stage/');
+		task1.push({ src: tarUrl, dst: 'build/stage/' + tarLocalPath });
+		task2.push({ src: 'build/stage/' + tarLocalPath, dst: self.internalPath, option: { strip: 1 } });
 	}
 
-	async _downloadLibs(sums: string[]) {
+	async _downloadLibs(task: ifKy[]) {
 		const log = this.log;
 		const self = this;
 		if (!environment.isWin) {
@@ -171,16 +128,8 @@ export class Dist {
 			const libUrl = urljoin(self.externalPath, fPath);
 			log.http('DIST', '\t- ' + libUrl);
 
-			await fs.ensureDir(path.join(self.internalPath, subDir));
-			console.log('_downloadLibs', libUrl, path.join(self.internalPath, fPath));
-			const sum = await this.downloader.downloadFile(libUrl, {
-				path: path.join(self.internalPath, fPath),
-				hash: sums ? 'sha256' : undefined
-			});
-
-			if (sums) {
-				testSum(sums, sum, fPath);
-			}
+			fs.ensureDirSync(path.join(self.internalPath, subDir));
+			task.push({ src: libUrl, dst: path.join(self.internalPath, fPath) });
 		}
 	}
 }
