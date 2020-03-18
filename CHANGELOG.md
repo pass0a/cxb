@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.0.15](https://github.com/pass0a/cxb/compare/v1.0.14...v1.0.15) (2020-03-18)
+
+
+### Bug Fixes
+
+* 解决路径带空格，增加strip功能，重构下载和解压模块 ([93bd9aa](https://github.com/pass0a/cxb/commit/93bd9aa578e31476fa43249f735880e919d8e0b5))
+
 ### [1.0.14](https://github.com/pass0a/cxb/compare/v1.0.13...v1.0.14) (2020-03-16)
 
 
