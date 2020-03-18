@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.0.16](https://github.com/pass0a/cxb/compare/v1.0.15...v1.0.16) (2020-03-18)
+
+
+### Bug Fixes
+
+* remove test code for nodejs ([8b4f245](https://github.com/pass0a/cxb/commit/8b4f245f676e2492a4dfa13fa9987061be71e2fa))
+
 ### [1.0.15](https://github.com/pass0a/cxb/compare/v1.0.14...v1.0.15) (2020-03-18)
 
 
