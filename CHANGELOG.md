@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.0.17](https://github.com/pass0a/cxb/compare/v1.0.16...v1.0.17) (2020-03-19)
+
+
+### Bug Fixes
+
+* 修复不能正常install的问题 ([e7fc160](https://github.com/pass0a/cxb/commit/e7fc160f7747f1e1bb466d9d9a56d5ca7fcc5fea))
+
 ### [1.0.16](https://github.com/pass0a/cxb/compare/v1.0.15...v1.0.16) (2020-03-18)
 
 
