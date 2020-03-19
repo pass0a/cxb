@@ -1,6 +1,5 @@
 import * as fs from 'fs-extra';
 import * as minimist from 'minimist';
-import * as readline from 'readline';
 import * as url from 'url';
 import * as path from 'path';
 import * as cp from 'child_process';
@@ -14,11 +13,7 @@ let downloader = new Downloader({});
 interface ConfigObject {
 	[key: string]: any;
 }
-function slog(msg: string) {
-	//readline.clearLine(process.stdout, 0);
-	readline.cursorTo(process.stdout, 0, undefined);
-	process.stdout.write(msg);
-}
+
 process.on('unhandledRejection', (error) => {
 	console.error('unhandledRejection', error);
 	process.exit(1); // To exit with a 'failure' code
@@ -69,7 +64,6 @@ async function main() {
 	} else if (argv.i || argv.install) {
 		let cwd = process.cwd();
 		let r = cwd.indexOf('node_modules');
-		console.log(cwd, r);
 		if (r < 0) {
 			console.log('donot install when process.cwd in this project!!!');
 		} else {
@@ -261,7 +255,9 @@ async function install(config: any) {
 	config.hosted_tarball = url.resolve(config.hosted_path, config.package_name);
 	let tarball = `${config.module_name}-v${config.version}-${config.platform}-${config.arch}.tar.gz`;
 	config.staged_tarball = path.join('build/stage', tarball);
-	console.log(config);
+
+	await downloader.downloadAll([ { src: config.hosted_tarball, dst: config.staged_tarball } ]);
+	await downloader.unzipAll([ { src: config.staged_tarball, dst: config.module_path } ]);
 	// if (await download(config.hosted_tarball, config.staged_tarball)) {
 	// 	fs.removeSync(config.staged_tarball);
 	// 	throw new Error(`download ${config.hosted_tarball} error in install`);
