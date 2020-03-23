@@ -5,7 +5,6 @@ import * as readline from 'readline';
 import * as path from 'path';
 import axios from 'axios';
 import { gzip, tgz, zip, streamHeader } from 'compressing';
-import { resolve } from 'dns';
 
 function slog(msg: string) {
 	//readline.clearLine(process.stdout, 0);
@@ -46,7 +45,7 @@ export class Downloader {
 			})
 				.then((response) => {
 					this.length += parseInt(response.headers['content-length'], 10);
-					fs.ensureDir(path.dirname(iter.dst));
+					fs.ensureDirSync(path.dirname(iter.dst));
 					response.data.on('data', (chunk: Buffer) => {
 						this.done += chunk.length;
 						if (isNaN(this.length)) {
@@ -55,6 +54,7 @@ export class Downloader {
 							slog(`Downloading ${(this.done / 1024).toFixed(2)}/ ${(this.length / 1024).toFixed(2)} kb`);
 						}
 					});
+					fs.ensureFileSync(iter.dst);
 					response.data.pipe(
 						fs
 							.createWriteStream(iter.dst)
@@ -85,6 +85,7 @@ export class Downloader {
 	}
 	async unzipAll(task: ifKy[]) {
 		let op = [];
+
 		for (const iter of task) {
 			let ext = this.getExt(iter.src, [ 'tgz', 'tar.gz', 'zip', 'gz', 'gzip' ]);
 			switch (ext) {
@@ -101,11 +102,12 @@ export class Downloader {
 					break;
 			}
 		}
+
 		await Promise.all(op);
 		console.log('\nunzip all end\n');
 	}
 	private handleError(err: Error) {
-		console.log(err.stack);
+		throw err;
 	}
 	private handleFinish() {}
 	private strip(str: string, deep: number) {
@@ -116,7 +118,6 @@ export class Downloader {
 	private onEntry(iter: ifKy, header: any, stream: any, next: () => void) {
 		stream.on('end', next);
 		if (iter.option && iter.option.strip) header.name = this.strip(header.name, iter.option.strip);
-		console.log(header.name);
 		if (header.type === 'file') {
 			fs.ensureDir(path.dirname(path.join(iter.dst, header.name)), {}, (err) => {
 				if (err) return this.handleError(err);
@@ -133,8 +134,12 @@ export class Downloader {
 	uncompressingTgz(iter: ifKy): Promise<boolean> {
 		return new Promise((resolve, reject) => {
 			new tgz.UncompressStream({ source: iter.src })
-				.on('error', this.handleError)
-				.on('finish', this.handleFinish) // uncompressing is done
+				.on('error', () => {
+					reject('can not uncompressing TGZ');
+				})
+				.on('finish', () => {
+					resolve(true);
+				}) // uncompressing is done
 				.on('entry', (header, stream, next) => {
 					this.onEntry(iter, header, stream, next);
 				});
@@ -144,8 +149,12 @@ export class Downloader {
 	uncompressingZip(iter: ifKy): Promise<boolean> {
 		return new Promise((resolve, reject) => {
 			new zip.UncompressStream({ source: iter.src })
-				.on('error', this.handleError)
-				.on('finish', this.handleFinish) // uncompressing is done
+				.on('error', () => {
+					reject('can not uncompressing ZIP');
+				})
+				.on('finish', () => {
+					resolve(true);
+				}) // uncompressing is done
 				.on('entry', (header, stream, next) => {
 					this.onEntry(iter, header, stream, next);
 				});
@@ -154,8 +163,12 @@ export class Downloader {
 	uncompressingGZip(iter: ifKy): Promise<boolean> {
 		return new Promise((resolve, reject) => {
 			new gzip.UncompressStream({ source: iter.src })
-				.on('error', this.handleError)
-				.on('finish', this.handleFinish) // uncompressing is done
+				.on('error', () => {
+					reject('can not uncompressing GZ');
+				})
+				.on('finish', () => {
+					resolve(true);
+				}) // uncompressing is done
 				.on('entry', (header, stream, next) => {
 					this.onEntry(iter, header, stream, next);
 				});

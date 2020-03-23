@@ -248,6 +248,8 @@ async function build(config: any) {
 				throw new Error(`please check your config for ${build_str}`);
 			}
 		}
+	} else {
+		throw new Error('build_cmd has not in cxb.config.js');
 	}
 }
 async function install(config: any) {
