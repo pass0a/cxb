@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.0.19](https://github.com/pass0a/cxb/compare/v1.0.18...v1.0.19) (2020-03-23)
+
+
+### Bug Fixes
+
+* 没有等流写完，就通知解压成功，导致流的写入被中断。 ([22b1543](https://github.com/pass0a/cxb/commit/22b154310edaa1ba708f0e1decafdd5f2e1173fc))
+
 ### [1.0.18](https://github.com/pass0a/cxb/compare/v1.0.17...v1.0.18) (2020-03-23)
 
 
