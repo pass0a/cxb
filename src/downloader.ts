@@ -1,10 +1,9 @@
 import { CMLog, ifCMLog } from './cmLog';
-import { isNumber, isString } from 'util';
 import * as fs from 'fs-extra';
 import * as readline from 'readline';
 import * as path from 'path';
 import axios from 'axios';
-import { gzip, tgz, zip, streamHeader } from 'compressing';
+import { gzip, tgz, zip } from 'compressing';
 
 function slog(msg: string) {
 	//readline.clearLine(process.stdout, 0);
@@ -22,12 +21,12 @@ export interface ifKy {
 	option?: optUnZip;
 }
 export class Downloader {
-	private log: CMLog;
 	private done: number = 0;
 	private length: number = 0;
-	constructor(options: ifCMLog) {
-		this.log = new CMLog(options);
-	}
+	private unzipTotal = 0;
+	private unzipNo = 0;
+	private notifyOk = (result: any) => {};
+	constructor(options: ifCMLog) {}
 	async downloadAll(task: ifKy[]) {
 		let op = [];
 		for (const iter of task) {
@@ -106,10 +105,7 @@ export class Downloader {
 		await Promise.all(op);
 		console.log('\nunzip all end\n');
 	}
-	private handleError(err: Error) {
-		throw err;
-	}
-	private handleFinish() {}
+
 	private strip(str: string, deep: number) {
 		let arr = path.normalize(str).split(path.sep);
 		arr.splice(0, arr.length < deep ? arr.length - 1 : deep);
@@ -119,17 +115,22 @@ export class Downloader {
 		stream.on('end', next);
 		if (iter.option && iter.option.strip) header.name = this.strip(header.name, iter.option.strip);
 		if (header.type === 'file') {
-			fs.ensureDir(path.dirname(path.join(iter.dst, header.name)), {}, (err) => {
-				if (err) return this.handleError(err);
-				stream.pipe(fs.createWriteStream(path.join(iter.dst, header.name)));
-			});
+			this.unzipTotal++;
+			fs.ensureDirSync(path.dirname(path.join(iter.dst, header.name)));
+			stream.pipe(
+				fs.createWriteStream(path.join(iter.dst, header.name)).on('close', () => {
+					this.unzipNo++;
+					this.notifyFinish();
+				})
+			);
 		} else {
 			// directory
-			fs.ensureDir(path.join(iter.dst, header.name), {}, (err) => {
-				if (err) return this.handleError(err);
-				stream.resume();
-			});
+			fs.ensureDirSync(path.dirname(path.join(iter.dst, header.name)));
+			stream.resume();
 		}
+	}
+	private notifyFinish() {
+		if (this.notifyOk && this.unzipNo >= this.unzipTotal) this.notifyOk(true);
 	}
 	uncompressingTgz(iter: ifKy): Promise<boolean> {
 		return new Promise((resolve, reject) => {
@@ -138,7 +139,8 @@ export class Downloader {
 					reject('can not uncompressing TGZ');
 				})
 				.on('finish', () => {
-					resolve(true);
+					this.notifyOk = resolve;
+					this.notifyFinish();
 				}) // uncompressing is done
 				.on('entry', (header, stream, next) => {
 					this.onEntry(iter, header, stream, next);
@@ -153,7 +155,8 @@ export class Downloader {
 					reject('can not uncompressing ZIP');
 				})
 				.on('finish', () => {
-					resolve(true);
+					this.notifyOk = resolve;
+					this.notifyFinish();
 				}) // uncompressing is done
 				.on('entry', (header, stream, next) => {
 					this.onEntry(iter, header, stream, next);
@@ -167,7 +170,8 @@ export class Downloader {
 					reject('can not uncompressing GZ');
 				})
 				.on('finish', () => {
-					resolve(true);
+					this.notifyOk = resolve;
+					this.notifyFinish();
 				}) // uncompressing is done
 				.on('entry', (header, stream, next) => {
 					this.onEntry(iter, header, stream, next);
