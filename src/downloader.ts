@@ -1,15 +1,8 @@
-import { CMLog, ifCMLog } from './cmLog';
+import { slog, ifCMLog } from './cmLog';
 import * as fs from 'fs-extra';
-import * as readline from 'readline';
 import * as path from 'path';
 import axios from 'axios';
 import { gzip, tgz, zip } from 'compressing';
-
-function slog(msg: string) {
-	//readline.clearLine(process.stdout, 0);
-	readline.cursorTo(process.stdout, 0, undefined);
-	process.stdout.write(msg);
-}
 
 export interface optUnZip {
 	strip: number;

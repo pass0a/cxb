@@ -108,9 +108,9 @@ export class Dist {
 		let tarLocalPath = runtimePaths.get(self.targetOptions).tarPath;
 		let tarUrl = urljoin(self.externalPath, tarLocalPath);
 		log.http('DIST', '\t- ' + tarUrl);
-		fs.ensureDirSync('build/stage/');
-		task1.push({ src: tarUrl, dst: 'build/stage/' + tarLocalPath });
-		task2.push({ src: 'build/stage/' + tarLocalPath, dst: self.internalPath, option: { strip: 1 } });
+		fs.ensureDirSync('tmp/stage/');
+		task1.push({ src: tarUrl, dst: 'tmp/stage/' + tarLocalPath });
+		task2.push({ src: 'tmp/stage/' + tarLocalPath, dst: self.internalPath, option: { strip: 1 } });
 	}
 
 	async _downloadLibs(task: ifKy[]) {

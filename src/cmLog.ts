@@ -1,5 +1,7 @@
 'use strict';
+import * as readline from 'readline';
 let log = require('npmlog');
+
 export interface ifCMLog {
 	noLog?: boolean;
 	logName?: string;
@@ -65,4 +67,9 @@ export class CMLog {
 			log.error(cat, msg);
 		}
 	}
+}
+export function slog(msg: string) {
+	//readline.clearLine(process.stdout, 0);
+	readline.cursorTo(process.stdout, 0, undefined);
+	process.stdout.write(msg);
 }

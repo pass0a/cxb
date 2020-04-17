@@ -1,0 +1,14 @@
+{
+	"name": "somebody",
+	"version": "1.0.0",
+	"description": "",
+	"main": "lib/index.js",
+	"types": "lib/index.d.ts",
+	"scripts": {},
+	"dependencies": {
+		"@passoa/simple": "../simple",
+		"@passoa/cxb": "../../"
+	},
+	"author": "",
+	"license": "ISC"
+}

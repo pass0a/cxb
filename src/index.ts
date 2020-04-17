@@ -1,5 +1,5 @@
 import * as fs from 'fs-extra';
-import * as minimist from 'minimist';
+
 import * as url from 'url';
 import * as path from 'path';
 import * as cp from 'child_process';
@@ -7,10 +7,31 @@ import { Dist } from './dist';
 import * as environment from './environment';
 import { Downloader, ifKy } from './downloader';
 import { isArray, isString } from 'util';
+import { Uploader } from './uploader';
 let dist = new Dist();
 let downloader = new Downloader({});
 
 interface ConfigObject {
+	name: string;
+	configuration: string;
+	external: any[];
+	version: string;
+	platform: string;
+	arch: string;
+	build_cmd: any;
+	toolset_path: string;
+	make_path: string;
+	module_name: string;
+	module_path: string;
+	remote_path: string;
+	package_name: string;
+	host: string;
+	hosted_path: string;
+	hosted_tarball: string;
+	staged_tarball: string;
+	root_dir: string;
+	method: string;
+	form: boolean;
 	[key: string]: any;
 }
 
@@ -18,8 +39,8 @@ process.on('unhandledRejection', (error) => {
 	console.error('unhandledRejection', error);
 	process.exit(1); // To exit with a 'failure' code
 });
-main();
-function initConfig(): ConfigObject {
+
+export function initConfig(): ConfigObject {
 	const pkg = require(`${process.cwd()}/package.json`);
 	let env = process.env;
 	let config = {
@@ -33,17 +54,22 @@ function initConfig(): ConfigObject {
 		toolset_path: env.toolset_path || '',
 		make_path: env.make_path || 'make',
 		module_name: pkg.name,
-		module_path: 'lib',
+		module_path: 'build',
 		remote_path: 'repertory/cxb/',
 		package_name: '',
 		host: '',
 		hosted_path: '',
 		hosted_tarball: '',
 		staged_tarball: '',
+		method: 'put',
+		form: false,
 		root_dir: process.cwd()
 	};
+
 	const opts: ConfigObject = require(`${config.root_dir}/cxb.config.js`)(config);
 	mergeConfig(config, opts);
+	config.hosted_path = url.resolve(config.host, config.remote_path);
+	config.hosted_tarball = url.resolve(config.hosted_path, config.package_name);
 	return config;
 }
 function mergeConfig(config: ConfigObject, opts: ConfigObject) {
@@ -54,9 +80,8 @@ function mergeConfig(config: ConfigObject, opts: ConfigObject) {
 	}
 }
 
-async function main() {
-	let argv = minimist(process.argv.slice(2));
-	usage(argv);
+export async function run(argv: any) {
+	if (usage(argv)) return -1;
 	await dist.ensureDownloaded();
 	let config = initConfig();
 	if (argv.b || argv.build) {
@@ -66,12 +91,17 @@ async function main() {
 		let r = cwd.indexOf('node_modules');
 		if (r < 0) {
 			console.log('donot install when process.cwd in this project!!!');
+			return 0;
 		} else {
 			await install(config);
 		}
+	} else if (argv.r || argv.release) {
+		await release(config);
 	} else {
 		console.log('cxb: show help with --help');
+		return -2;
 	}
+	return 0;
 	//install('https://passoa-generic.pkg.coding.net/libbt/libbt/master?version=latest', '');
 }
 function usage(argv: any) {
@@ -87,9 +117,11 @@ function usage(argv: any) {
 		log('');
 		log('  -h, --help     Display this usage info');
 		log('  -b, --build   build cpp for project');
+		log('  -r, --release   release node tgz for project');
 		log('  -i, --install   install cpp module(it will build cpp module if could not download from remote)');
-		process.exit(help ? 0 : 1);
+		return -1;
 	}
+	return 0;
 }
 function eval_template(template: string, opts: any) {
 	template = template.replace(/\{([a-zA-Z0-9_-]+)\}/g, (str: string, ...args: any[]): string => {
@@ -155,7 +187,7 @@ function isStringArray2(arr: any[]) {
 	}
 	return true;
 }
-function addDefaultCmd(bc: string[]) {
+function addDefaultCmd(bc: string[], config: ConfigObject) {
 	let incPaths;
 	if (dist.headerOnly) {
 		incPaths = [ path.join(dist.internalPath, '/include/node') ];
@@ -174,34 +206,35 @@ function addDefaultCmd(bc: string[]) {
 			bc.push(`-DCMAKE_JS_LIB=${libs.join(';')}`);
 		}
 	}
+	bc.push(`-DCXB_MODULE_DIST=${config.root_dir}/${config.module_path}`);
 }
-function buildByStringArray(build_str: string, opts: any, bc: string[]) {
+function buildByStringArray(build_str: string, config: ConfigObject, bc: string[]) {
 	for (const key in bc) {
 		if (bc.hasOwnProperty(key)) {
 			const element = bc[key];
-			bc[key] = eval_template(element, opts);
+			bc[key] = eval_template(element, config);
 		}
 	}
 
-	fs.emptyDirSync(`build/${build_str}`);
-	process.chdir(`build/${build_str}`);
+	fs.emptyDirSync(`tmp/${build_str}`);
+	process.chdir(`tmp/${build_str}`);
 
 	bc = [ '../../' ].concat(bc);
-	addDefaultCmd(bc);
+	addDefaultCmd(bc, config);
 	console.log(bc);
 
 	let r = cp.spawnSync('cmake', bc, { stdio: 'inherit' });
 	if (r.status) {
 		throw new Error('cmake generator fails');
 	}
-	r = cp.spawnSync('cmake', [ '--build', './', '--config', opts.configuration ], { stdio: 'inherit' });
+	r = cp.spawnSync('cmake', [ '--build', './', '--config', config.configuration ], { stdio: 'inherit' });
 	if (r.status) {
 		throw new Error('cmake build fails');
 	}
 	process.chdir('../../');
 }
 
-async function build(config: any) {
+export async function build(config: ConfigObject) {
 	if (config.external) {
 		let task1 = new Array<ifKy>(),
 			task2 = new Array<ifKy>();
@@ -216,7 +249,7 @@ async function build(config: any) {
 				} else {
 					throw new Error('cxb.external config has error');
 				}
-				let tmp = `${config.root_dir}/build/stage/${key}/${path.basename(url)}`;
+				let tmp = `${config.root_dir}/tmp/stage/${key}/${path.basename(url)}`;
 				let dst = path.join(`${config.root_dir}/3rd`, key);
 
 				if (fs.existsSync(dst)) {
@@ -251,15 +284,19 @@ async function build(config: any) {
 	} else {
 		throw new Error('build_cmd has not in cxb.config.js');
 	}
+	return 0;
 }
-async function install(config: any) {
-	config.hosted_path = url.resolve(config.host, config.remote_path);
-	config.hosted_tarball = url.resolve(config.hosted_path, config.package_name);
+export async function install(config: ConfigObject) {
 	let tarball = `${config.module_name}-v${config.version}-${config.platform}-${config.arch}.tar.gz`;
-	config.staged_tarball = path.join('build/stage', tarball);
+	config.staged_tarball = path.join('tmp/stage', tarball);
+	try {
+		await downloader.downloadAll([ { src: config.hosted_tarball, dst: config.staged_tarball } ]);
+		await downloader.unzipAll([ { src: config.staged_tarball, dst: config.module_path } ]);
+		console.log(config.staged_tarball, config.module_path);
+	} catch (err) {
+		build(config);
+	}
 
-	await downloader.downloadAll([ { src: config.hosted_tarball, dst: config.staged_tarball } ]);
-	await downloader.unzipAll([ { src: config.staged_tarball, dst: config.module_path } ]);
 	// if (await download(config.hosted_tarball, config.staged_tarball)) {
 	// 	fs.removeSync(config.staged_tarball);
 	// 	throw new Error(`download ${config.hosted_tarball} error in install`);
@@ -268,4 +305,19 @@ async function install(config: any) {
 	// 	fs.removeSync(config.staged_tarball);
 	// 	throw new Error(`uncompress ${config.staged_tarball} error in install`);
 	// }
+}
+export async function release(config: ConfigObject) {
+	let up = new Uploader();
+	let src = path.join(config.root_dir, config.module_path);
+	config.staged_tarball = path.join(config.root_dir, `tmp/${config.module_name}.tar.gz`);
+	await up.packTgz(src, config.staged_tarball);
+	let username = process.env.cxbusername;
+	let password = process.env.cxbpassword;
+	config.token = Buffer.from(`${username}:${password}`, 'utf8').toString('base64');
+	console.log(config.staged_tarball, config.token);
+	await up.upload(config.hosted_tarball, config.staged_tarball, config.token, {
+		method: config.method,
+		form: config.form
+	});
+	return 0;
 }

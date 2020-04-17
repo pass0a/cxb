@@ -1,14 +1,13 @@
 module.exports = (opts) => {
-	let module_name = opts.module_name;
+	let module_name = 'cxbtest';
 	let config = {
-		module_name: 'cvip',
+		module_name: module_name,
 		remote_path: 'repertory/cxb/',
 		package_name: `${module_name}.tar.gz?version=${opts.version}-${opts.platform}-${opts.arch}`,
 		host: 'https://passoa-generic.pkg.coding.net',
-		external: { opencv: [ 'http://127.0.0.1:8080/pcan.tgz', 1 ] },
 		build_cmd: {
-			windows_x86: [ `-DBT_APP=${module_name}` ],
-			node_x86: [ '-DNODE=1' ]
+			windows_x64: [ '-G', 'Visual Studio 14 2015 Win64' ],
+			node_x64: [ '-G', 'Visual Studio 14 2015 Win64' ]
 		}
 	};
 	return config;
