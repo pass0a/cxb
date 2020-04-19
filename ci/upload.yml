@@ -26,10 +26,10 @@ steps:
 
   # Run build project
   - task: Npm@1
-  inputs:
-    command: 'custom'
-    workingDir: './'
-    customCommand: 'run build'
+    inputs:
+      command: 'custom'
+      workingDir: './'
+      customCommand: 'run build'
 
   # Run test-ci-partial
   - script: npm run test-ci
@@ -45,15 +45,15 @@ steps:
     
   # Publish CI coverage
   - task: PublishCodeCoverageResults@1
-  inputs:
-    codeCoverageTool: Cobertura
-    summaryFileLocation: '$(System.DefaultWorkingDirectory)/reports/coverage/*coverage.xml'
-    condition: succeededOrFailed()
+    inputs:
+      codeCoverageTool: Cobertura
+      summaryFileLocation: '$(System.DefaultWorkingDirectory)/reports/coverage/*coverage.xml'
+      condition: succeededOrFailed()
 
   - task: Npm@1
-  inputs:
-    command: 'publish'
-    workingDir: './'
-    customRegistry: 'useFeed'
-    publishEndpoint: 'npmjs.org'
-  condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/tags/v'))
+    inputs:
+      command: 'publish'
+      workingDir: './'
+      customRegistry: 'useFeed'
+      publishEndpoint: 'npmjs.org'
+    condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/tags/v'))
