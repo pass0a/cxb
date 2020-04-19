@@ -1,8 +1,6 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
-
+#
+# Azure Pipelines configuration for building and testing Jest on Linux, Windows, and macOS.
+#
 trigger:
   batch: true
   branches:
@@ -12,28 +10,40 @@ trigger:
 pr:
 - master
 
+jobs:
+  - job: Linux
+    pool:
+      vmImage: ubuntu-16.04
+    steps:
+      - template: ci/steps.yml
 
-pool:
-  name: Hosted VS2017
-
-steps:
-
-- task: Npm@1
-  displayName: 'npm install'
-  inputs:
-    workingDir: './'
-    verbose: false
-
-- task: Npm@1
-  inputs:
-    command: 'custom'
-    workingDir: './'
-    customCommand: 'run build'
+  - job: macOS
+    pool:
+      vmImage: macos-10.15
+    steps:
+      # This step can be removed once Mercurial gets installed on the macOS image. See https://github.com/Microsoft/azure-pipelines-image-generation/issues/604
+      - script: HOMEBREW_NO_AUTO_UPDATE=1 brew install mercurial
+        displayName: 'Install Mercurial'
+      - template: ci/steps.yml
   
-- task: Npm@1
-  inputs:
-    command: 'publish'
-    workingDir: './'
-    customRegistry: 'useFeed'
-    publishEndpoint: 'npmjs.org'
-  condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/tags/v'))
+  - job: Windows
+    pool:
+      vmImage: vs2017-win2016
+    dependsOn: 
+      - Linux
+      - macOS
+    steps:
+      - script: |
+          git config --global core.autocrlf false
+          git config --global core.symlinks true
+        displayName: 'Preserve LF endings and symbolic links on check out'
+      - template: ci/upload.yml
+
+variables:
+  # Used by chalk. Ensures output from Jest includes ANSI escape characters that are needed to match test snapshots.
+  FORCE_COLOR: 1
+
+  # Ensures the handful of tests that should be skipped during CI are
+  CI: true
+
+  npm_config_cache: $(Pipeline.Workspace)/.npm

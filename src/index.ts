@@ -81,8 +81,8 @@ function mergeConfig(config: ConfigObject, opts: ConfigObject) {
 }
 
 export async function run(argv: any) {
-	if (usage(argv)) return -1;
 	await dist.ensureDownloaded();
+	if (usage(argv)) return -1;
 	let config = initConfig();
 	if (argv.b || argv.build) {
 		await build(config);
@@ -291,12 +291,12 @@ export async function install(config: ConfigObject) {
 	config.staged_tarball = path.join('tmp/stage', tarball);
 	try {
 		await downloader.downloadAll([ { src: config.hosted_tarball, dst: config.staged_tarball } ]);
-		await downloader.unzipAll([ { src: config.staged_tarball, dst: config.module_path } ]);
-		console.log(config.staged_tarball, config.module_path);
+		await downloader.unzipAll([ { src: config.staged_tarball, dst: './' } ]);
 	} catch (err) {
-		build(config);
+		console.log(err.message);
+		return build(config);
 	}
-
+	return 0;
 	// if (await download(config.hosted_tarball, config.staged_tarball)) {
 	// 	fs.removeSync(config.staged_tarball);
 	// 	throw new Error(`download ${config.hosted_tarball} error in install`);

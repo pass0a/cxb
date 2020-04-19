@@ -60,7 +60,7 @@ export class Downloader {
 					);
 				})
 				.catch((err) => {
-					throw new Error(`some error was happend with download file ${iter.src}`);
+					reject(err);
 				});
 		});
 	}
@@ -128,8 +128,8 @@ export class Downloader {
 	uncompressingTgz(iter: ifKy): Promise<boolean> {
 		return new Promise((resolve, reject) => {
 			new tgz.UncompressStream({ source: iter.src })
-				.on('error', () => {
-					reject('can not uncompressing TGZ');
+				.on('error', (err) => {
+					reject(err);
 				})
 				.on('finish', () => {
 					this.notifyOk = resolve;
@@ -144,8 +144,8 @@ export class Downloader {
 	uncompressingZip(iter: ifKy): Promise<boolean> {
 		return new Promise((resolve, reject) => {
 			new zip.UncompressStream({ source: iter.src })
-				.on('error', () => {
-					reject('can not uncompressing ZIP');
+				.on('error', (err) => {
+					reject(err);
 				})
 				.on('finish', () => {
 					this.notifyOk = resolve;
@@ -159,8 +159,8 @@ export class Downloader {
 	uncompressingGZip(iter: ifKy): Promise<boolean> {
 		return new Promise((resolve, reject) => {
 			new gzip.UncompressStream({ source: iter.src })
-				.on('error', () => {
-					reject('can not uncompressing GZ');
+				.on('error', (err) => {
+					reject(err);
 				})
 				.on('finish', () => {
 					this.notifyOk = resolve;
