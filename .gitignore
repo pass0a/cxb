@@ -38,7 +38,6 @@ typings/
 lib
 dist
 *.map
-package-lock.json
 tmp
 build
 *report*/
