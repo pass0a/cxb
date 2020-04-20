@@ -1,4 +1,4 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.14)
 PROJECT(simple )
 set(CMAKE_USE_RELATIVE_PATHS ON)
 
@@ -31,4 +31,5 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${NODE_ADDON_API_DIR} ${CMAKE
 target_link_libraries(simple
 				${CMAKE_JS_LIB}
 			 )
+target_compile_features(simple PUBLIC cxx_std_11)
 set(CMAKE_SHARED_LIBRARY_SUFFIX ".node")
