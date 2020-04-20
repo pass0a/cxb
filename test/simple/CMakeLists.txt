@@ -31,6 +31,18 @@ string(REPLACE "\"" "" NODE_ADDON_API_DIR ${NODE_ADDON_API_DIR})
 add_library(simple SHARED
 				index.cpp
 				)
+				
+if(APPLE)
+	macro (set_xcode_property TARGET XCODE_PROPERTY XCODE_VALUE)
+            set_property (TARGET ${TARGET} PROPERTY XCODE_ATTRIBUTE_${XCODE_PROPERTY}
+                ${XCODE_VALUE})
+    endmacro (set_xcode_property)
+	set_xcode_property(simple GCC_SYMBOLS_PRIVATE_EXTERN YES)	
+	target_compile_options(simple	
+		PRIVATE -fvisibility-inlines-hidden	
+	)
+endif()
+
 target_include_directories(${PROJECT_NAME} PRIVATE ${NODE_ADDON_API_DIR} ${CMAKE_JS_INC})
 target_link_libraries(simple
 				${CMAKE_JS_LIB}
@@ -38,3 +50,4 @@ target_link_libraries(simple
 target_compile_features(simple PUBLIC cxx_std_11)
 set(CMAKE_SHARED_LIBRARY_SUFFIX ".node")
 set(CMAKE_SHARED_LIBRARY_PREFIX "")
+

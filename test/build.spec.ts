@@ -59,7 +59,8 @@ describe('cxb uploader', () => {
 		process.chdir(join(__dirname, 'simple'));
 		let up = new Uploader();
 		let env = process.env;
-		const token = Buffer.from(`${env.cxbusername}:${env.cxbpassword}`, 'utf8').toString('base64');
+		console.log(`${env.CXBUSERNAME}`);
+		const token = Buffer.from(`${env.CXBUSERNAME}:${env.CXBPASSWORD}`, 'utf8').toString('base64');
 		let config = initConfig();
 
 		fs.ensureFileSync(dst);
