@@ -34,7 +34,7 @@ steps:
       command: 'custom'
       workingDir: './'
       customCommand: 'run build'
-
+   
   # Run test-ci-partial
   - script: npm run test-ci
     displayName: 'Run tests'

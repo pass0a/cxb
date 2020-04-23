@@ -39,7 +39,7 @@ if(APPLE)
     endmacro (set_xcode_property)
 	set_xcode_property(simple GCC_SYMBOLS_PRIVATE_EXTERN YES)	
 	target_compile_options(simple	
-		PRIVATE -fvisibility-inlines-hidden	
+		PRIVATE -fvisibility-hidden	
 	)
 endif()
 

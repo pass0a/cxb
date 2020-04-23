@@ -59,7 +59,8 @@ describe('cxb uploader', () => {
 		process.chdir(join(__dirname, 'simple'));
 		let up = new Uploader();
 		let env = process.env;
-		console.log(`${env.CXBUSERNAME}`);
+		console.log(`------->${env.CXBUSERNAME}`);
+		console.log(`=======>${env.TESTPASSWORD}`);
 		const token = Buffer.from(`${env.CXBUSERNAME}:${env.CXBPASSWORD}`, 'utf8').toString('base64');
 		let config = initConfig();
 
