@@ -190,12 +190,12 @@ function isStringArray2(arr: any[]) {
 function addDefaultCmd(bc: string[], config: ConfigObject) {
 	let incPaths;
 	if (dist.headerOnly) {
-		incPaths = [ path.join(dist.internalPath, '/include/node') ];
+		incPaths = [path.join(dist.internalPath, '/include/node')];
 	} else {
 		let nodeH = path.join(dist.internalPath, '/src');
 		let v8H = path.join(dist.internalPath, '/deps/v8/include');
 		let uvH = path.join(dist.internalPath, '/deps/uv/include');
-		incPaths = [ nodeH, v8H, uvH ];
+		incPaths = [nodeH, v8H, uvH];
 	}
 	// Includes:
 	bc.push(`-DCMAKE_JS_INC=${incPaths.join(';')}`);
@@ -219,7 +219,7 @@ function buildByStringArray(build_str: string, config: ConfigObject, bc: string[
 	fs.emptyDirSync(`tmp/${build_str}`);
 	process.chdir(`tmp/${build_str}`);
 
-	bc = [ '../../' ].concat(bc);
+	bc = ['../../'].concat(bc);
 	addDefaultCmd(bc, config);
 	console.log(bc);
 
@@ -227,7 +227,7 @@ function buildByStringArray(build_str: string, config: ConfigObject, bc: string[
 	if (r.status) {
 		throw new Error('cmake generator fails');
 	}
-	r = cp.spawnSync('cmake', [ '--build', './', '--config', config.configuration ], { stdio: 'inherit' });
+	r = cp.spawnSync('cmake', ['--build', './', '--config', config.configuration], { stdio: 'inherit' });
 	if (r.status) {
 		throw new Error('cmake build fails');
 	}
@@ -290,8 +290,8 @@ export async function install(config: ConfigObject) {
 	let tarball = `${config.module_name}-v${config.version}-${config.platform}-${config.arch}.tar.gz`;
 	config.staged_tarball = path.join('tmp/stage', tarball);
 	try {
-		await downloader.downloadAll([ { src: config.hosted_tarball, dst: config.staged_tarball } ]);
-		await downloader.unzipAll([ { src: config.staged_tarball, dst: './' } ]);
+		await downloader.downloadAll([{ src: config.hosted_tarball, dst: config.staged_tarball }]);
+		await downloader.unzipAll([{ src: config.staged_tarball, dst: './' }]);
 	} catch (err) {
 		console.log(err.message);
 		return build(config);
@@ -311,10 +311,8 @@ export async function release(config: ConfigObject) {
 	let src = path.join(config.root_dir, config.module_path);
 	config.staged_tarball = path.join(config.root_dir, `tmp/${config.module_name}.tar.gz`);
 	await up.packTgz(src, config.staged_tarball);
-	let username = process.env.cxbusername;
-	let password = process.env.cxbpassword;
-	config.token = Buffer.from(`${username}:${password}`, 'utf8').toString('base64');
-	console.log(config.staged_tarball, config.token);
+	let env = process.env;
+	config.token = Buffer.from(`${env.CXBUSERNAME}:${env.CXBPASSWORD}`, 'utf8').toString('base64');
 	await up.upload(config.hosted_tarball, config.staged_tarball, config.token, {
 		method: config.method,
 		form: config.form

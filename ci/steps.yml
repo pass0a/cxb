@@ -39,8 +39,8 @@ steps:
   - script: npm run test-ci
     displayName: 'Run tests'
     env:
-      cxbusername: $(cxbusername)
-      cxbpassword: $(cxbusername)
+      CXBUSERNAME: $(CXBUSERNAME)
+      CXBPASSWORD: $(CXBPASSWORD)
 
   # Publish CI test results
   - task: PublishTestResults@2

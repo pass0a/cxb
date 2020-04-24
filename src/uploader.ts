@@ -7,7 +7,7 @@ import { pipeline } from 'stream';
 import { readFile } from 'fs';
 
 export class Uploader {
-	constructor() {}
+	constructor() { }
 	packTgz(src: string, dst: string) {
 		return new Promise(async (resolve, reject) => {
 			let ts = new tgz.Stream();
@@ -28,7 +28,7 @@ export class Uploader {
 			});
 		});
 	}
-	readFileByPath(path: string) {}
+	readFileByPath(path: string) { }
 	upload(url: string, path: string, token: string, opt = { method: 'put', form: false }) {
 		return new Promise(async (resolve, reject) => {
 			let form: any;
@@ -87,7 +87,7 @@ export class Uploader {
 					}
 				})
 				.catch((error) => {
-					console.log(error.message);
+					console.log("[uploaded error]:", error.message);
 					reject(-2);
 				});
 		});

@@ -37,6 +37,7 @@ jobs:
           git config --global core.autocrlf false
           git config --global core.symlinks true
         displayName: 'Preserve LF endings and symbolic links on check out'
+      - template: ci/steps.yml
       - template: ci/upload.yml
 
 variables:

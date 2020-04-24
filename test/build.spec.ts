@@ -40,7 +40,7 @@ describe('cxb interface', () => {
 		let config = initConfig();
 		let ret = await release(config);
 		expect(ret).toBe(0);
-	});
+	}, 30000);
 });
 describe('cxb uploader', () => {
 	let dst = join(__dirname, '../tmp/test.tgz');
@@ -55,22 +55,20 @@ describe('cxb uploader', () => {
 		expect(ret).toBe(0);
 	});
 
-	test('upload', async () => {
-		process.chdir(join(__dirname, 'simple'));
-		let up = new Uploader();
-		let env = process.env;
-		console.log(`------->${env.CXBUSERNAME}`);
-		console.log(`=======>${env.TESTPASSWORD}`);
-		const token = Buffer.from(`${env.CXBUSERNAME}:${env.CXBPASSWORD}`, 'utf8').toString('base64');
-		let config = initConfig();
+	// test('upload', async () => {
+	// 	process.chdir(join(__dirname, 'simple'));
+	// 	let up = new Uploader();
+	// 	let env = process.env;
+	// 	const token = Buffer.from(`${env.CXBUSERNAME}:${env.CXBPASSWORD}`, 'utf8').toString('base64');
+	// 	let config = initConfig();
 
-		fs.ensureFileSync(dst);
-		let ret = await up.packTgz(src, dst);
-		expect(ret).toBe(0);
-		console.log(config.hosted_tarball, dst);
-		ret = await up.upload(config.hosted_tarball, dst, token);
-		expect(ret).toBe(0);
-	});
+	// 	fs.ensureFileSync(dst);
+	// 	let ret = await up.packTgz(src, dst);
+	// 	expect(ret).toBe(0);
+	// 	console.log(config.hosted_tarball, dst);
+	// 	ret = await up.upload(config.hosted_tarball, dst, token);
+	// 	expect(ret).toBe(0);
+	// });
 });
 
 describe('cxb npm', () => {

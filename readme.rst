@@ -1,18 +1,23 @@
 ============================
 reStructuredText with Sphinx
 ============================
+.. class:: no-web no-pdf
 
-.. image:: https://img.shields.io/npm/v/@passoa/cxb   
+    |npm| |build| |test| |coverage| |vulnerabilities|
+
+.. |npm| image:: https://img.shields.io/npm/v/@passoa/cxb
+    :target: https://www.npmjs.com/package/@passoa/cxb
     :alt: npm
-.. image:: https://img.shields.io/azure-devops/build/passoa/cxb/33   
+.. |build| image:: https://img.shields.io/azure-devops/build/passoa/cxb/33
+    :target: https://dev.azure.com/passoa/cxb/_build/latest?definitionId=33
     :alt: Azure DevOps tests
-.. image:: https://img.shields.io/azure-devops/tests/passoa/cxb/33   
+.. |test| image:: https://img.shields.io/azure-devops/tests/passoa/cxb/33
+    :target: https://dev.azure.com/passoa/cxb/_build/latest?definitionId=33
     :alt: Azure DevOps tests
-.. image:: https://img.shields.io/azure-devops/release/passoa/cxb/33   
+.. |coverage| image:: https://img.shields.io/azure-devops/coverage/passoa/cxb/33   
+    :target: https://dev.azure.com/passoa/cxb/_build/latest?definitionId=33
     :alt: Azure DevOps tests
-.. image:: https://img.shields.io/azure-devops/coverage/passoa/cxb/33   
-    :alt: Azure DevOps tests
-.. image:: https://img.shields.io/snyk/vulnerabilities/npm/@passoa/cxb   
+.. |vulnerabilities| image:: https://img.shields.io/snyk/vulnerabilities/npm/@passoa/cxb
     :alt: Snyk Vulnerabilities for npm scoped package
 
 -----------------
