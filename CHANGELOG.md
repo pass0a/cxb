@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.0.22](https://github.com/pass0a/cxb/compare/v1.0.21...v1.0.22) (2020-04-28)
+
+
+### Bug Fixes
+
+* azurepipelines网络连接国内网络较差，暂时去掉上传步骤的测试。 ([3de4293](https://github.com/pass0a/cxb/commit/3de42938acb76a30040ca96aa4ceaea6ff1288e6))
+
 ### [1.0.21](https://github.com/pass0a/cxb/compare/v1.0.19...v1.0.21) (2020-04-28)
 
 

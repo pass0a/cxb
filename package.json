@@ -1,6 +1,6 @@
 {
 	"name": "@passoa/cxb",
-	"version": "1.0.21",
+	"version": "1.0.22",
 	"description": "install native modules@passoa",
 	"main": "lib/index.js",
 	"types": "lib/index.d.ts",
