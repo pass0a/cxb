@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.0.23](https://github.com/pass0a/cxb/compare/v1.0.22...v1.0.23) (2020-05-08)
+
+
+### Bug Fixes
+
+* cxb依赖smever不能去除 ([e3ceef8](https://github.com/pass0a/cxb/commit/e3ceef877114d9690a24d8d227229ee6e864b16e))
+
 ### [1.0.22](https://github.com/pass0a/cxb/compare/v1.0.21...v1.0.22) (2020-04-28)
 
 
