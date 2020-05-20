@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.0.24](https://github.com/pass0a/cxb/compare/v1.0.23...v1.0.24) (2020-05-20)
+
+
+### Bug Fixes
+
+* 去掉无用的which依赖 ([23e6f4c](https://github.com/pass0a/cxb/commit/23e6f4cb7c952c1ba2b7464e9e226aec9f458d62))
+
 ### [1.0.23](https://github.com/pass0a/cxb/compare/v1.0.22...v1.0.23) (2020-05-08)
 
 
