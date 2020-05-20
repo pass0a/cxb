@@ -1,7 +1,7 @@
 'use strict';
 import * as os from 'os';
 let isIOJS = require('is-iojs');
-let which = require('which');
+//let which = require('which');
 export let moduleVersion = require('../package.json').version;
 export let platform = os.platform();
 export let isWin = os.platform() === 'win32';
