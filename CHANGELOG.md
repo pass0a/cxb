@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.0.25](https://github.com/pass0a/cxb/compare/v1.0.24...v1.0.25) (2020-06-17)
+
+
+### Bug Fixes
+
+* 解决build步骤时不能下载带参数的压缩包的问题 ([ded0642](https://github.com/pass0a/cxb/commit/ded06427c68a64e57297cd89eda43e5dbe29355a))
+
 ### [1.0.24](https://github.com/pass0a/cxb/compare/v1.0.23...v1.0.24) (2020-05-20)
 
 
