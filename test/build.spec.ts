@@ -1,6 +1,7 @@
 import { run, initConfig, build, install, pack } from '../src/index';
-import { join } from 'path';
+import { join, basename } from 'path';
 import { runTest } from './simple';
+import { parse } from 'url';
 
 describe('cxb interface', () => {
 	test(
@@ -31,6 +32,10 @@ describe('cxb interface', () => {
 		config.hosted_tarball = 'jijiji';
 		let ret = await install(config);
 		expect(ret).toBe(0);
+	});
+	test('url', async () => {
+		let tmp = basename(parse('http://127.0.0.1/xxx.tgz').pathname);
+		expect(tmp).toBe('xxx.tgz');
 	});
 	test(
 		'pack',

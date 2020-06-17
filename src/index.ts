@@ -243,22 +243,24 @@ export async function build(config: ConfigObject) {
 		for (const key in config.external) {
 			if (config.external.hasOwnProperty(key)) {
 				const obj = config.external[key];
-				let url = '';
+				let urlstring = '';
 				if (isArray(obj)) {
-					url = obj[0];
+					urlstring = obj[0];
 				} else if (isString(obj)) {
-					url = obj;
+					urlstring = obj;
 				} else {
 					throw new Error('cxb.external config has error');
 				}
-				let tmp = `${config.root_dir}/tmp/stage/${key}/${path.basename(url)}`;
+				let pathname = url.parse(urlstring).pathname;
+				if (!pathname) throw new Error('cxb.external config has error:' + pathname);
+				let tmp = `${config.root_dir}/tmp/stage/${key}/${path.basename(pathname)}`;
 				let dst = path.join(`${config.root_dir}/3rd`, key);
 
 				if (fs.existsSync(dst)) {
 					break;
 				}
-				console.log(url, tmp);
-				task1.push({ src: url, dst: tmp });
+				console.log(urlstring, tmp);
+				task1.push({ src: urlstring, dst: tmp });
 				task2.push({ src: tmp, dst: dst, option: { strip: obj[1] } });
 			}
 		}
@@ -295,6 +297,7 @@ export async function install(config: ConfigObject) {
 		await downloader.downloadAll([ { src: config.hosted_tarball, dst: config.staged_tarball } ]);
 		await downloader.unzipAll([ { src: config.staged_tarball, dst: './' } ]);
 	} catch (err) {
+		console.log(config.hosted_tarball);
 		console.log(err.message);
 		return build(config);
 	}
